@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "notification-worker": "node auth_service/workers/notification.worker.js",
+    "audit-worker": "node auth_service/workers/audit.worker.js",
+    "dlq-worker": "node auth_service/workers/dlq.worker.js"
   },
   "keywords": [],
   "author": "",
