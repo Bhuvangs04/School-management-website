@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import RefreshSession from "../models/refreshSession.model.js";
 import { generateAccessToken } from "../utils/jwt.js";
 import { hashToken, createRefreshToken, generateJTI } from "../utils/crypto.js";
@@ -102,7 +103,7 @@ export const loginUser = async ({ email, password, ip, userAgent }) => {
     metrics.sessionCreated.inc?.();
 
     if (!isFirstLogin && (riskScore > 0 && riskScore < 50 || !session.trusted)) {
-        await notificationQueue.add("newDeviceEmail", {
+        notificationQueue.add("newDeviceEmail", {
             userId: user._id,
             email: user.email,
             deviceId: session.deviceId,
@@ -166,7 +167,7 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
     if (session.isRevoked) {
         const riskScore = computeRiskScore({ geo, userAgent, ip, lastSession: session });
 
-        await notificationQueue.add("tokenReuseAlert", {
+        notificationQueue.add("tokenReuseAlert", {
             userId: user._id,
             email: user.email,
             deviceId: session.deviceId,
@@ -205,7 +206,7 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
 
         const riskScore = computeRiskScore({ geo, userAgent, ip, lastSession: session });
 
-        await notificationQueue.add("tokenReuseAlert", {
+        notificationQueue.add("tokenReuseAlert", {
             userId: user._id,
             email: user.email,
             deviceId: session.deviceId,
