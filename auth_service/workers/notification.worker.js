@@ -1,24 +1,20 @@
 import dotenv from "dotenv";
 dotenv.config();
+
 import BullMQ from "bullmq";
-const { Worker} = BullMQ; 
+const { Worker } = BullMQ;
+
 import { connection } from "../lib/redis.js";
-import nodemailer from "nodemailer";
 import { notificationDLQ, auditQueue } from "../queues/notification.queue.js";
 import Audit from "../models/audit.model.js";
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS
-    }
-});
+// RESEND
+import { Resend } from "resend";
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Verify transporter early so we fail fast if creds are wrong
-transporter.verify()
-    .then(() => console.log("[EMAIL] Transporter verified (ready to send)"))
-    .catch(err => console.error("[EMAIL] Transporter verification failed:", err?.message || err));
+console.log("[EMAIL] Resend initialized");
+
+// ---------------- WORKER ----------------- //
 
 const worker = new Worker(
     "notificationQueue",
@@ -41,22 +37,16 @@ const worker = new Worker(
                     throw new Error(`Unknown job type: ${job.name}`);
             }
         } catch (err) {
-            // Re-throw so bullmq registers the failure (and can retry / call failed handlers)
-            console.error(`[WORKER] Exception in job "${job.name}":`, err?.message || err, {
-                stack: err?.stack
-            });
+            console.error(`[WORKER] Exception in job "${job.name}":`, err?.message || err);
             throw err;
         }
     },
-    { connection, concurrency: 10 },
-    
+    { connection, concurrency: 10 }
 );
 
-
-
-
-// Log lifecycle events
 console.log("[WORKER] Notification worker started...");
+
+// ---------------- EVENTS ----------------- //
 
 worker.on("active", job => {
     console.log(`[WORKER] Processing job: ${job.name}`, {
@@ -69,15 +59,14 @@ worker.on("active", job => {
 worker.on("completed", async job => {
     console.log(`[WORKER] Job completed: ${job.name}`, { id: job.id });
 
-    // When job completes → log audit if included
     if (job.data?.audit) {
         try {
             await auditQueue.add("auditEvent", job.data.audit, {
                 removeOnComplete: true
             });
-            console.log("[WORKER] Audit queued for completed job:", { jobId: job.id });
+            console.log("[WORKER] Audit queued for completed job");
         } catch (err) {
-            console.error("[WORKER] Failed to enqueue audit for completed job:", err?.message || err);
+            console.error("[WORKER] Failed to enqueue audit:", err?.message || err);
         }
     }
 });
@@ -89,45 +78,34 @@ worker.on("failed", async (job, err) => {
         reason: err?.message || String(err)
     });
 
-    // If job exhausted attempts -> push to DLQ for later inspection
     try {
-        const attemptsMade = job?.attemptsMade || 0;
-        const maxAttempts = job?.opts?.attempts || 0;
-
-        if (maxAttempts > 0 && attemptsMade >= maxAttempts) {
+        if (job.attemptsMade >= job.opts?.attempts) {
             await notificationDLQ.add(
                 "dead",
                 {
                     originalName: job.name,
                     data: job.data,
                     failedReason: err?.message || String(err),
-                    attemptsMade,
+                    attemptsMade: job.attemptsMade,
                     finishedAt: new Date()
                 },
                 { removeOnComplete: true }
             );
-            console.warn("[DLQ] Job moved to DLQ:", { jobName: job.name, jobId: job.id });
+            console.warn("[DLQ] Job moved to DLQ:", job.name);
         }
     } catch (dlqErr) {
-        console.error("[DLQ] Failed to push job to DLQ:", dlqErr?.message || dlqErr);
+        console.error("[DLQ] Failed to push to DLQ:", dlqErr?.message || dlqErr);
     }
 });
 
-// ------------ EMAIL SENDER FUNCTIONS ------------ //
+// ------------- EMAIL FUNCTIONS (RESEND) ------------- //
 
-async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore } = {}) {
+async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore }) {
     console.log("[EMAIL] sendNewDeviceEmail called", { email, deviceId, ip, geo, riskScore });
 
-    if (!email) {
-        const err = new Error("Missing required field: email");
-        console.error("[EMAIL] Validation error:", err.message);
-        throw err;
-    }
+    if (!email) throw new Error("Missing required field: email");
 
-    const mailOptions = {
-        to: email,
-        subject: "New device login detected",
-        text: `We detected a login from a new device.
+    const text = `We detected a login from a new device.
 
 Device ID: ${deviceId || "unknown"}
 IP Address: ${ip || "unknown"}
@@ -135,15 +113,19 @@ Location: ${geo?.country || "unknown"}, ${geo?.city || ""}
 Risk Score: ${riskScore ?? "unknown"}
 
 If this was not you, please secure your account immediately.
-`
-    };
+`;
 
     try {
-        const res = await transporter.sendMail(mailOptions);
-        console.log("[EMAIL] newDeviceEmail sent successfully", { email, messageId: res?.messageId });
+        const res = await resend.emails.send({
+            from: "School App <onboarding@resend.dev>",
+            to: email,
+            subject: "New Device Login Detected",
+            text
+        });
+
+        console.log("[EMAIL] newDeviceEmail sent successfully", { email, id: res?.id });
     } catch (err) {
-        console.error("[EMAIL] newDeviceEmail failed to send:", err?.message || err);
-        // Let the worker fail so bullmq can retry according to job opts
+        console.error("[EMAIL] newDeviceEmail failed:", err?.message || err);
         throw err;
     }
 
@@ -151,34 +133,32 @@ If this was not you, please secure your account immediately.
     return { ok: true };
 }
 
-async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore } = {}) {
+async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore }) {
     console.log("[EMAIL] sendTokenReuseAlert called", { email, deviceId, ip, geo, riskScore });
 
-    if (!email) {
-        const err = new Error("Missing required field: email");
-        console.error("[EMAIL] Validation error:", err.message);
-        throw err;
-    }
+    if (!email) throw new Error("Missing required field: email");
 
-    const mailOptions = {
-        to: email,
-        subject: "Security Alert: Token Reuse Detected",
-        text: `We detected an attempt to reuse a refresh token.
+    const text = `We detected a refresh token reuse attempt.
 
 Device ID: ${deviceId || "unknown"}
-IP Address: ${ip || "unknown"}
+IP: ${ip || "unknown"}
 Location: ${geo?.country || "unknown"}, ${geo?.city || ""}
 Risk Score: ${riskScore ?? "unknown"}
 
-We have revoked all active sessions for your security.
-`
-    };
+All sessions have been revoked for your safety.
+`;
 
     try {
-        const res = await transporter.sendMail(mailOptions);
-        console.log("[EMAIL] tokenReuseAlert sent successfully", { email, messageId: res?.messageId });
+        const res = await resend.emails.send({
+            from: "School App <onboarding@resend.dev>",
+            to: email,
+            subject: "Security Alert: Token Reuse Detected",
+            text
+        });
+
+        console.log("[EMAIL] tokenReuseAlert sent successfully", { email, id: res?.id });
     } catch (err) {
-        console.error("[EMAIL] tokenReuseAlert failed to send:", err?.message || err);
+        console.error("[EMAIL] tokenReuseAlert failed:", err?.message || err);
         throw err;
     }
 
@@ -186,19 +166,19 @@ We have revoked all active sessions for your security.
     return { ok: true };
 }
 
-// ------------ AUDIT HELPER (safe) ------------ //
+// ------------------- AUDIT HELPER ------------------- //
 
 async function saveAuditSafe(userId, event, metadata = {}) {
     try {
         await Audit.create({ userId, event, metadata, createdAt: new Date() });
         console.log("[AUDIT] Saved:", { userId, event });
     } catch (err) {
-        // Don't fail the whole worker if audit save fails; just log it.
-        console.error("[AUDIT] save failed:", err?.message || err, { userId, event });
+        console.error("[AUDIT] save failed:", err?.message || err);
     }
 }
 
-// Graceful shutdown handlers
+// ---------------- SHUTDOWN ---------------- //
+
 async function shutdown(signal) {
     try {
         console.log(`[WORKER] Shutdown signal received (${signal}). Closing worker...`);
@@ -214,12 +194,8 @@ async function shutdown(signal) {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-// Extra safety: capture unhandled rejections / exceptions so the process doesn't silently die
-process.on("unhandledRejection", (reason) => {
-    console.error("[PROCESS] Unhandled Rejection:", reason);
-});
-process.on("uncaughtException", (err) => {
-    console.error("[PROCESS] Uncaught Exception:", err?.message || err, { stack: err?.stack });
-    // allow process to exit after logging — orchestrator should restart
+process.on("unhandledRejection", reason => console.error("[PROCESS] Unhandled Rejection:", reason));
+process.on("uncaughtException", err => {
+    console.error("[PROCESS] Uncaught Exception:", err?.message || err);
     process.exit(1);
 });
