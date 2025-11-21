@@ -2,19 +2,13 @@ import IORedis from "ioredis";
 import dotenv from "dotenv";
 dotenv.config();
 
-
-export const connection = new IORedis({
-    host: process.env.REDIS_HOST || "localhost",
-    port: parseInt(process.env.REDIS_PORT || "6379", 10),
+export const connection = new IORedis(process.env.REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
 });
 
 connection.on("connect", () => {
-    console.log("[REDIS] Connected to server", {
-        host: process.env.REDIS_HOST,
-        port: process.env.REDIS_PORT
-    });
+    console.log("[REDIS] Connected to server via URL");
 });
 
 connection.on("error", (err) => {
