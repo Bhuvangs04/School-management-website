@@ -6,12 +6,13 @@ import RefreshSession from "../models/refreshSession.model.js";
 import { generateAccessToken } from "../utils/jwt.js";
 import { hashToken, createRefreshToken, generateJTI } from "../utils/crypto.js";
 import { notificationQueue } from "../queues/notification.queue.js";
-import nodemailer from "nodemailer";
 import { lookupGeo } from "../utils/geo.js"
 import { computeRiskScore } from "../utils/risk.js"
 import { v4 as uuidv4 } from "uuid";
 import { metrics } from "../metrics/pm2.metrics.js";
 import Audit from "../models/audit.model.js";
+import { generateActionToken} from "../utils/actionToken.js";
+import ActionToken from "../models/ActionToken.model.js";
 
 
 export const registerUser = async ({ name, email, password, role, collegeId }) => {
@@ -103,22 +104,34 @@ export const loginUser = async ({ email, password, ip, userAgent }) => {
     metrics.sessionCreated.inc?.();
 
     if (!isFirstLogin && (riskScore > 0 && riskScore < 50 || !session.trusted)) {
-        notificationQueue.add("newDeviceEmail", {
+
+        const { token: approveToken, tokenId: approveTokenId } = generateActionToken({
+            userId: user._id,
+            deviceId: session.deviceId,
+            action: "approve_device"
+        });
+
+        await ActionToken.create({ tokenId: approveTokenId });
+
+        const approveUrl = `${process.env.CLIENT_URL}/auth/action?token=${approveToken}`;
+
+        await notificationQueue.add("newDeviceEmail", {
             userId: user._id,
             email: user.email,
             deviceId: session.deviceId,
             geo: session.geo,
             ip,
-            riskScore
+            riskScore,
+            approveUrl
         }, {
             attempts: 5,
             backoff: { type: "exponential", delay: 1000 },
-            removeOnComplete: { age: 60 * 60 },
-            removeOnFail: false,
+            removeOnComplete: { age: 3600 }
         });
-        console.log("[QUEUE] Job added:", { name: "newDeviceEmail"});
+
         metrics.newDeviceAlert.inc?.();
     }
+
 
     if (riskScore > 80) {
         session.isRevoked = true;
@@ -166,14 +179,31 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
 
     if (session.isRevoked) {
         const riskScore = computeRiskScore({ geo, userAgent, ip, lastSession: session });
+        const { token: revokeToken, tokenId: revokeTokenId } = generateActionToken({
+            userId: user._id,
+            deviceId: session.deviceId,
+            action: "revoke_device"
+        });
+        await ActionToken.create({ tokenId: revokeTokenId });
+        const revokeUrl = `${process.env.CLIENT_URL}/auth/action?token=${revokeToken}`;
 
-        notificationQueue.add("tokenReuseAlert", {
+        const { token: revokeAllToken, tokenId: revokeAllTokenId } = generateActionToken({
+            userId: user._id,
+            action: "revoke_all"
+        });
+        await ActionToken.create({ tokenId: revokeAllTokenId });
+        const revokeAllUrl = `${process.env.CLIENT_URL}/auth/action?token=${revokeAllToken}`;
+
+
+       await notificationQueue.add("tokenReuseAlert", {
             userId: user._id,
             email: user.email,
             deviceId: session.deviceId,
             geo: session.geo,
             ip,
-            riskScore
+            riskScore,
+            revokeUrl,
+            revokeAllUrl
         }, {
             attempts: 5,
             backoff: { type: "exponential", delay: 1000 },
@@ -205,14 +235,31 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
         );
 
         const riskScore = computeRiskScore({ geo, userAgent, ip, lastSession: session });
+        const { token: revokeToken, tokenId: revokeTokenId } = generateActionToken({
+            userId: user._id,
+            deviceId: session.deviceId,
+            action: "revoke_device"
+        });
+        await ActionToken.create({ tokenId: revokeTokenId });
+        const revokeUrl = `${process.env.CLIENT_URL}/auth/action?token=${revokeToken}`;
 
-        notificationQueue.add("tokenReuseAlert", {
+        const { token: revokeAllToken, tokenId: revokeAllTokenId } = generateActionToken({
+            userId: user._id,
+            action: "revoke_all"
+        });
+        await ActionToken.create({ tokenId: revokeAllTokenId });
+        const revokeAllUrl = `${process.env.CLIENT_URL}/auth/action?token=${revokeAllToken}`;
+
+
+        await notificationQueue.add("tokenReuseAlert", {
             userId: user._id,
             email: user.email,
             deviceId: session.deviceId,
             ip,
             geo: session.geo,
-            riskScore
+            riskScore,
+            revokeUrl,
+            revokeAllUrl
         }, {
             attempts: 3,
             backoff: { type: "fixed", delay: 2000 },
@@ -275,31 +322,34 @@ export const sendOtp = async (email) => {
     const user = await User.findOne({ email });
     if (!user) throw new Error("Email not registered");
 
-    const otp = uuidv4().slice(0, 6).toUpperCase(); 
+    const otp = uuidv4().slice(0, 6).toUpperCase();
 
     user.resetOtp = otp;
-    user.resetOtpExp = Date.now() + 10 * 60 * 1000; 
+    user.resetOtpExp = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    let transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: process.env.MAIL_USER,
-            pass: process.env.MAIL_PASS
+    // push OTP email job to queue
+    await notificationQueue.add(
+        "sendOtpEmail",
+        {
+            userId: user._id,
+            email: user.email,
+            otp
+        },
+        {
+            attempts: 5,
+            backoff: { type: "exponential", delay: 1000 },
+            removeOnComplete: true,
+            removeOnFail: false
         }
-    });
+    );
 
-    await transporter.sendMail({
-        from: `"School App" <${process.env.MAIL_USER}>`,
-        to: user.email,
-        subject: "Password Reset OTP",
-        text: `Your OTP is ${otp}. It expires in 10 minutes.`
-    });
+    console.log("[QUEUE] OTP email job enqueued");
 
     metrics.otpRequests.inc();
 
     return true;
-}
+};
 
 
 export const resetPassword = async (email, otp, newPassword) => {

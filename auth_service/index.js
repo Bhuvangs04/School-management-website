@@ -4,7 +4,7 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
-
+import actionRoutes from "./routes/action.route.js";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import io from "@pm2/io";
@@ -34,6 +34,8 @@ app.use("/auth/send-otp", loginLimiter);
 
 
 app.use("/auth", authRoutes);
+app.use("/auth", actionRoutes);
+
 
 app.listen(process.env.PORT, () => {
     console.log(`AUTH SERVICE RUNNING ON PORT ${process.env.PORT}`);

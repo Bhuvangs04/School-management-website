@@ -75,8 +75,8 @@ export const getOtpHtml = (otp) => {
   `;
 };
 
-export const getNewDeviceHtml = ({ deviceId, ip, geo, riskScore }) => {
-    return `
+export const getNewDeviceHtml = ({ deviceId, ip, geo, riskScore, approveUrl }) => {
+  return `
     <div style="${baseStyles}">
       <div style="${containerStyle}">
         <div style="${headerStyle}">
@@ -84,30 +84,38 @@ export const getNewDeviceHtml = ({ deviceId, ip, geo, riskScore }) => {
         </div>
         <div style="${contentStyle}">
           <h2 style="margin-top: 0;">Was this you?</h2>
-          <p>We noticed a new login to your account from a device we don't recognize.</p>
-          
+          <p>We noticed a new login from a device not previously seen.</p>
+
           <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background-color: #f9fafb; border-radius: 8px;">
             <tr>
               <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #4b5563;">Device ID</td>
-              <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${deviceId || "Unknown"}</td>
+              <td style="padding: 12px;">${deviceId}</td>
             </tr>
             <tr>
               <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #4b5563;">Location</td>
-              <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${geo?.city || "Unknown"}, ${geo?.country || ""}</td>
+              <td style="padding: 12px;">${geo?.city || "Unknown"}, ${geo?.country || "Unknown"}</td>
             </tr>
             <tr>
-              <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #4b5563;">IP Address</td>
-              <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${ip || "Unknown"}</td>
+              <td style="padding: 12px; font-weight: bold; color: #4b5563;">IP Address</td>
+              <td style="padding: 12px;">${ip}</td>
             </tr>
             <tr>
               <td style="padding: 12px; font-weight: bold; color: #4b5563;">Risk Score</td>
-              <td style="padding: 12px;">${riskScore ?? "N/A"}</td>
+              <td style="padding: 12px;">${riskScore}</td>
             </tr>
           </table>
 
-          <p style="margin-top: 25px;">If this was you, no further action is needed.</p>
-          <p><strong>If this wasn't you, please reset your password immediately.</strong></p>
+          <p style="margin-top: 20px;">If this was you, please approve the device:</p>
+
+          <div style="text-align:center;">
+            <a href="${approveUrl}" style="${buttonStyle}">
+              Approve This Device
+            </a>
+          </div>
+
+          <p style="margin-top: 20px; color: #666;">If this was not you, please change your password immediately.</p>
         </div>
+
         <div style="${footerStyle}">
           &copy; ${new Date().getFullYear()} School App. All rights reserved.
         </div>
@@ -116,27 +124,42 @@ export const getNewDeviceHtml = ({ deviceId, ip, geo, riskScore }) => {
   `;
 };
 
-export const getTokenReuseHtml = ({ deviceId, ip, geo, riskScore }) => {
-    return `
+export const getTokenReuseHtml = ({ deviceId, ip, geo, riskScore, revokeUrl, revokeAllUrl }) => {
+  return `
     <div style="${baseStyles}">
       <div style="${containerStyle}">
-        <div style="${headerStyle}" style="background-color: #DC2626;">
+        <div style="background-color:#DC2626; color:#fff; padding:20px; text-align:center; font-size:24px; font-weight:bold;">
           Security Alert
         </div>
+
         <div style="${contentStyle}">
-          <h2 style="color: #DC2626; margin-top: 0;">Critical: Token Reuse Detected</h2>
-          <p>We detected a suspicious attempt to reuse an old authentication token. To protect your account, <strong>we have revoked all active sessions</strong>.</p>
-          
+          <h2 style="color:#DC2626; margin-top:0;">Token Reuse Detected</h2>
+          <p>We detected an attempt to reuse an invalidated refresh token.</p>
+
           <div style="background-color: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; padding: 15px; border-radius: 6px; margin: 20px 0;">
-             <strong>Suspicious Activity Details:</strong><br/>
-             IP: ${ip || "Unknown"}<br/>
-             Location: ${geo?.city || "Unknown"}, ${geo?.country || ""}<br/>
-             Device: ${deviceId || "Unknown"}
-             Risk Score : ${riskScore || "Null"} 
+             <strong>Suspicious Activity:</strong><br/>
+             Device: ${deviceId}<br/>
+             IP: ${ip}<br/>
+             Location: ${geo?.city}, ${geo?.country}<br/>
+             Risk Score: ${riskScore}
           </div>
 
-          <p>Please log in again to re-authenticate your devices.</p>
+          <p>Please take one of the following actions:</p>
+
+          <div style="text-align:center; margin-top:25px;">
+            <a href="${revokeUrl}" style="${buttonStyle} background:#DC2626;">
+              Revoke This Device
+            </a>
+          </div>
+
+          <div style="text-align:center; margin-top:15px;">
+            <a href="${revokeAllUrl}" style="${buttonStyle} background:#111;">
+              Revoke ALL Sessions
+            </a>
+          </div>
+
         </div>
+
         <div style="${footerStyle}">
           &copy; ${new Date().getFullYear()} School App. All rights reserved.
         </div>

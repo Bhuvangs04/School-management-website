@@ -6,7 +6,7 @@ const { Worker } = BullMQ;
 import { connection } from "../lib/redis.js";
 import { notificationDLQ, auditQueue } from "../queues/notification.queue.js";
 import Audit from "../models/audit.model.js";
-import { getNewDeviceHtml, getTokenReuseHtml } from "../utils/Email.template.js"
+import { getNewDeviceHtml, getTokenReuseHtml, getOtpHtml } from "../utils/Email.template.js"
 import axios from "axios";
 
 console.log("[EMAIL] Brevo initialized");
@@ -34,6 +34,9 @@ const startWorker = async () => {
 
                         case "tokenReuseAlert":
                             return await sendTokenReuseAlert(job.data);
+                        
+                        case "sendOtpEmail":
+                            return await sendOtpEmail(job.data);
 
                         default:
                             throw new Error(`Unknown job type: ${job.name}`);
@@ -139,12 +142,12 @@ async function sendBrevoEmail({ to, subject, html }) {
 }
 
 
-async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore }) {
-    console.log("[EMAIL] sendNewDeviceEmail called", { email, deviceId, ip, geo, riskScore });
+async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore, approveUrl }) {
+    console.log("[EMAIL] sendNewDeviceEmail called", { email, deviceId, ip, geo, riskScore, approveUrl });
 
     if (!email) throw new Error("Missing: email");
 
-    const html = getNewDeviceHtml({ deviceId, ip, geo, riskScore });
+    const html = getNewDeviceHtml({ deviceId, ip, geo, riskScore, approveUrl });
 
     await sendBrevoEmail({
         to: email,
@@ -152,17 +155,36 @@ async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore }) {
         html
     });
 
-    await saveAuditSafe(email, "NEW_DEVICE_EMAIL_SENT", { deviceId, ip, geo, riskScore });
+    await saveAuditSafe(email, "NEW_DEVICE_EMAIL_SENT", { deviceId, ip, geo, riskScore, approveUrl });
 
     return { ok: true };
 }
 
+async function sendOtpEmail({ email, otp }) {
+    console.log("[EMAIL] sendOtpEmail called", { email, otp });
+
+    if (!email || !otp) throw new Error("Missing email or otp");
+
+    const html = getOtpHtml(otp)
+
+    await sendBrevoEmail({
+        to: email,
+        subject: "OTP from School Management System",
+        html
+    });
+
+    await saveAuditSafe(email, "OTP_SENT", { otp });
+
+    return { ok: true };
+}
+
+
 async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore }) {
-    console.log("[EMAIL] sendTokenReuseAlert called", { email, deviceId, ip, geo, riskScore });
+    console.log("[EMAIL] sendTokenReuseAlert called", {email, deviceId, ip, geo, riskScore, revokeUrl,revokeAllUrl });
 
     if (!email) throw new Error("Missing: email");
 
-    const html = getTokenReuseHtml({ deviceId, ip, geo, riskScore });
+    const html = getTokenReuseHtml({ deviceId, ip, geo, riskScore, revokeUrl, revokeAllUrl });
 
     await sendBrevoEmail({
         to: email,
@@ -170,7 +192,7 @@ async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore }) {
         html
     });
 
-    await saveAuditSafe(email, "TOKEN_REUSE_ALERT_SENT", { deviceId, ip, geo, riskScore });
+    await saveAuditSafe(email, "TOKEN_REUSE_ALERT_SENT", { deviceId, ip, geo, riskScore, revokeUrl, revokeAllUrl });
 
     return { ok: true };
 }
