@@ -1,9 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config();
-
+import connectDB from "../config/db.js";
 import BullMQ from "bullmq";
 const { Worker } = BullMQ;
-
 import { connection } from "../lib/redis.js";
 import { notificationDLQ, auditQueue } from "../queues/notification.queue.js";
 import Audit from "../models/audit.model.js";
@@ -11,91 +10,100 @@ import axios from "axios";
 
 console.log("[EMAIL] Brevo initialized");
 
-// ---------------- WORKER ----------------- //
+let worker;
 
-const worker = new Worker(
-    "notificationQueue",
-    async job => {
-        console.log(`[WORKER] job handler invoked for "${job.name}"`, {
-            id: job.id,
-            attemptsMade: job.attemptsMade,
-            opts: job.opts
+
+const startWorker = async () => {
+    try {
+        await connectDB();
+
+        worker = new Worker(
+            "notificationQueue",
+            async job => {
+                console.log(`[WORKER] job handler invoked for "${job.name}"`, {
+                    id: job.id,
+                    attemptsMade: job.attemptsMade,
+                    opts: job.opts
+                });
+
+                try {
+                    switch (job.name) {
+                        case "newDeviceEmail":
+                            return await sendNewDeviceEmail(job.data);
+
+                        case "tokenReuseAlert":
+                            return await sendTokenReuseAlert(job.data);
+
+                        default:
+                            throw new Error(`Unknown job type: ${job.name}`);
+                    }
+                } catch (err) {
+                    console.error(`[WORKER] Exception in job "${job.name}":`, err?.message || err);
+                    throw err;
+                }
+            },
+            { connection, concurrency: 10 }
+        );
+
+        console.log("[WORKER] Notification worker started...");
+
+
+        worker.on("active", job => {
+            console.log(`[WORKER] Processing job: ${job.name}`, {
+                id: job.id,
+                data: job.data,
+                attemptsMade: job.attemptsMade
+            });
         });
 
-        try {
-            switch (job.name) {
-                case "newDeviceEmail":
-                    return await sendNewDeviceEmail(job.data);
+        worker.on("completed", async job => {
+            console.log(`[WORKER] Job completed: ${job.name}`, { id: job.id });
 
-                case "tokenReuseAlert":
-                    return await sendTokenReuseAlert(job.data);
-
-                default:
-                    throw new Error(`Unknown job type: ${job.name}`);
+            if (job.data?.audit) {
+                try {
+                    await auditQueue.add("auditEvent", job.data.audit, {
+                        removeOnComplete: true
+                    });
+                    console.log("[WORKER] Audit queued");
+                } catch (err) {
+                    console.error("[WORKER] Failed to enqueue audit:", err?.message || err);
+                }
             }
-        } catch (err) {
-            console.error(`[WORKER] Exception in job "${job.name}":`, err?.message || err);
-            throw err;
-        }
-    },
-    { connection, concurrency: 10 }
-);
+        });
 
-console.log("[WORKER] Notification worker started...");
-
-// ---------------- EVENTS ----------------- //
-
-worker.on("active", job => {
-    console.log(`[WORKER] Processing job: ${job.name}`, {
-        id: job.id,
-        data: job.data,
-        attemptsMade: job.attemptsMade
-    });
-});
-
-worker.on("completed", async job => {
-    console.log(`[WORKER] Job completed: ${job.name}`, { id: job.id });
-
-    if (job.data?.audit) {
-        try {
-            await auditQueue.add("auditEvent", job.data.audit, {
-                removeOnComplete: true
+        worker.on("failed", async (job, err) => {
+            console.error(`[WORKER] Job failed: ${job?.name}`, {
+                id: job?.id,
+                attemptsMade: job?.attemptsMade,
+                reason: err?.message || String(err)
             });
-            console.log("[WORKER] Audit queued");
-        } catch (err) {
-            console.error("[WORKER] Failed to enqueue audit:", err?.message || err);
-        }
+
+            try {
+                if (job.attemptsMade >= job.opts?.attempts) {
+                    await notificationDLQ.add(
+                        "dead",
+                        {
+                            originalName: job.name,
+                            data: job.data,
+                            failedReason: err?.message || String(err),
+                            attemptsMade: job.attemptsMade,
+                            finishedAt: new Date()
+                        },
+                        { removeOnComplete: true }
+                    );
+                    console.warn("[DLQ] Moved to DLQ:", job.name);
+                }
+            } catch (dlqErr) {
+                console.error("[DLQ] Failed to push to DLQ:", dlqErr?.message || dlqErr);
+            }
+        });
+
+    } catch (error) {
+        console.error("Failed to start worker:", error);
+        process.exit(1);
     }
-});
+};
 
-worker.on("failed", async (job, err) => {
-    console.error(`[WORKER] Job failed: ${job?.name}`, {
-        id: job?.id,
-        attemptsMade: job?.attemptsMade,
-        reason: err?.message || String(err)
-    });
-
-    try {
-        if (job.attemptsMade >= job.opts?.attempts) {
-            await notificationDLQ.add(
-                "dead",
-                {
-                    originalName: job.name,
-                    data: job.data,
-                    failedReason: err?.message || String(err),
-                    attemptsMade: job.attemptsMade,
-                    finishedAt: new Date()
-                },
-                { removeOnComplete: true }
-            );
-            console.warn("[DLQ] Moved to DLQ:", job.name);
-        }
-    } catch (dlqErr) {
-        console.error("[DLQ] Failed to push to DLQ:", dlqErr?.message || dlqErr);
-    }
-});
-
-// ---------------- BREVO EMAIL SENDER ----------------- //
 
 async function sendBrevoEmail({ to, subject, text }) {
     const apiKey = process.env.BREVO_API_KEY;
@@ -129,7 +137,6 @@ async function sendBrevoEmail({ to, subject, text }) {
     }
 }
 
-// ---------------- EMAIL TEMPLATES ----------------- //
 
 async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore }) {
     console.log("[EMAIL] sendNewDeviceEmail called", { email, deviceId, ip, geo, riskScore });
@@ -185,7 +192,6 @@ We revoked all sessions to protect your account.
     return { ok: true };
 }
 
-// ------------------- AUDIT HELPER ------------------- //
 
 async function saveAuditSafe(userId, event, metadata = {}) {
     try {
@@ -196,12 +202,14 @@ async function saveAuditSafe(userId, event, metadata = {}) {
     }
 }
 
-// ---------------- SHUTDOWN ---------------- //
 
 async function shutdown(signal) {
     try {
         console.log(`[WORKER] Shutting down (${signal})`);
-        await worker.close();
+        if (worker) {
+            await worker.close();
+            console.log("[WORKER] Closed gracefully");
+        }
         process.exit(0);
     } catch (err) {
         console.error("[WORKER] Shutdown error:", err?.message || err);
@@ -220,3 +228,6 @@ process.on("uncaughtException", err => {
     console.error("[PROCESS] Uncaught Exception:", err?.message || err);
     process.exit(1);
 });
+
+
+startWorker();

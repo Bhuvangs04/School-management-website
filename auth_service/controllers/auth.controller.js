@@ -1,4 +1,6 @@
 import * as AuthService from "../services/auth.service.js";
+import { normalizeIP } from "../utils/ip.js";
+
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -20,7 +22,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const {email, password} = req.body;
-        const ip = req.ip;
+        const ip = normalizeIP(req.ip);
         const userAgent = req.headers["user-agent"];
         const { user, accessToken, refreshToken, deviceId } = await AuthService.loginUser({ email, password, ip, userAgent });
 
@@ -39,7 +41,7 @@ export const refreshToken = async (req, res) => {
         const refreshToken = req.cookies?.refreshToken;
         const deviceId = req.cookies?.deviceId;
 
-        const ip = req.ip;
+        const ip = normalizeIP(req.ip);
         const userAgent = req.headers["user-agent"];
 
         if (!refreshToken || !deviceId) {

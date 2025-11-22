@@ -1,6 +1,8 @@
 import { Worker } from "bullmq";
 import { connection } from "../lib/redis.js";
 import DLQRecord from "../models/dlq.model.js";
+import "../config/db.js";
+
 
 new Worker("notificationDLQ", async job => {
     console.warn("DLQ job:", job.data);
