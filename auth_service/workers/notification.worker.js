@@ -179,7 +179,7 @@ async function sendOtpEmail({ email, otp }) {
 }
 
 
-async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore }) {
+async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore, revokeUrl, revokeAllUrl }) {
     console.log("[EMAIL] sendTokenReuseAlert called", {email, deviceId, ip, geo, riskScore, revokeUrl,revokeAllUrl });
 
     if (!email) throw new Error("Missing: email");
