@@ -6,6 +6,7 @@ const { Worker } = BullMQ;
 import { connection } from "../lib/redis.js";
 import { notificationDLQ, auditQueue } from "../queues/notification.queue.js";
 import Audit from "../models/audit.model.js";
+import { getNewDeviceHtml, getTokenReuseHtml } from "../utils/Email.template.js"
 import axios from "axios";
 
 console.log("[EMAIL] Brevo initialized");
@@ -105,7 +106,7 @@ const startWorker = async () => {
 };
 
 
-async function sendBrevoEmail({ to, subject, text }) {
+async function sendBrevoEmail({ to, subject, html }) {
     const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
     const senderName = process.env.BREVO_SENDER_NAME || "School App";
@@ -119,7 +120,7 @@ async function sendBrevoEmail({ to, subject, text }) {
                 sender: { name: senderName, email: senderEmail },
                 to: [{ email: to }],
                 subject,
-                textContent: text
+                htmlContent: html 
             },
             {
                 headers: {
@@ -143,21 +144,12 @@ async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore }) {
 
     if (!email) throw new Error("Missing: email");
 
-    const text = `
-New device login detected.
-
-Device ID: ${deviceId || "unknown"}
-IP Address: ${ip || "unknown"}
-Location: ${geo?.country || "unknown"}, ${geo?.city || ""}
-Risk Score: ${riskScore ?? "unknown"}
-
-If this was not you, secure your account immediately.
-`;
+    const html = getNewDeviceHtml({ deviceId, ip, geo, riskScore });
 
     await sendBrevoEmail({
         to: email,
         subject: "New Device Login Detected",
-        text
+        html
     });
 
     await saveAuditSafe(email, "NEW_DEVICE_EMAIL_SENT", { deviceId, ip, geo, riskScore });
@@ -170,21 +162,12 @@ async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore }) {
 
     if (!email) throw new Error("Missing: email");
 
-    const text = `
-⚠ Security Alert: Token Reuse Detected
-
-Device ID: ${deviceId || "unknown"}
-IP Address: ${ip || "unknown"}
-Location: ${geo?.country || "unknown"}, ${geo?.city || ""}
-Risk Score: ${riskScore ?? "unknown"}
-
-We revoked all sessions to protect your account.
-`;
+    const html = getTokenReuseHtml({ deviceId, ip, geo, riskScore });
 
     await sendBrevoEmail({
         to: email,
         subject: "Security Alert: Token Reuse Detected",
-        text
+        html
     });
 
     await saveAuditSafe(email, "TOKEN_REUSE_ALERT_SENT", { deviceId, ip, geo, riskScore });
