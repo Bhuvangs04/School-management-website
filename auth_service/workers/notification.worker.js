@@ -7,12 +7,9 @@ const { Worker } = BullMQ;
 import { connection } from "../lib/redis.js";
 import { notificationDLQ, auditQueue } from "../queues/notification.queue.js";
 import Audit from "../models/audit.model.js";
+import axios from "axios";
 
-// RESEND
-import { Resend } from "resend";
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-console.log("[EMAIL] Resend initialized");
+console.log("[EMAIL] Brevo initialized");
 
 // ---------------- WORKER ----------------- //
 
@@ -64,7 +61,7 @@ worker.on("completed", async job => {
             await auditQueue.add("auditEvent", job.data.audit, {
                 removeOnComplete: true
             });
-            console.log("[WORKER] Audit queued for completed job");
+            console.log("[WORKER] Audit queued");
         } catch (err) {
             console.error("[WORKER] Failed to enqueue audit:", err?.message || err);
         }
@@ -91,78 +88,100 @@ worker.on("failed", async (job, err) => {
                 },
                 { removeOnComplete: true }
             );
-            console.warn("[DLQ] Job moved to DLQ:", job.name);
+            console.warn("[DLQ] Moved to DLQ:", job.name);
         }
     } catch (dlqErr) {
         console.error("[DLQ] Failed to push to DLQ:", dlqErr?.message || dlqErr);
     }
 });
 
-// ------------- EMAIL FUNCTIONS (RESEND) ------------- //
+// ---------------- BREVO EMAIL SENDER ----------------- //
+
+async function sendBrevoEmail({ to, subject, text }) {
+    const apiKey = process.env.BREVO_API_KEY;
+    const senderEmail = process.env.BREVO_SENDER_EMAIL;
+    const senderName = process.env.BREVO_SENDER_NAME || "School App";
+
+    if (!apiKey) throw new Error("BREVO_API_KEY missing");
+
+    try {
+        const res = await axios.post(
+            "https://api.brevo.com/v3/smtp/email",
+            {
+                sender: { name: senderName, email: senderEmail },
+                to: [{ email: to }],
+                subject,
+                textContent: text
+            },
+            {
+                headers: {
+                    "api-key": apiKey,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        console.log("[BREVO] Email sent", res.data);
+        return res.data;
+    } catch (err) {
+        console.error("[BREVO] Email error:", err?.response?.data || err.message);
+        throw err;
+    }
+}
+
+// ---------------- EMAIL TEMPLATES ----------------- //
 
 async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore }) {
     console.log("[EMAIL] sendNewDeviceEmail called", { email, deviceId, ip, geo, riskScore });
 
-    if (!email) throw new Error("Missing required field: email");
+    if (!email) throw new Error("Missing: email");
 
-    const text = `We detected a login from a new device.
+    const text = `
+New device login detected.
 
 Device ID: ${deviceId || "unknown"}
 IP Address: ${ip || "unknown"}
 Location: ${geo?.country || "unknown"}, ${geo?.city || ""}
 Risk Score: ${riskScore ?? "unknown"}
 
-If this was not you, please secure your account immediately.
+If this was not you, secure your account immediately.
 `;
 
-    try {
-        const res = await resend.emails.send({
-            from: "School App <onboarding@resend.dev>",
-            to: email,
-            subject: "New Device Login Detected",
-            text
-        });
-
-        console.log("[EMAIL] newDeviceEmail sent successfully", { email, id: res?.id });
-    } catch (err) {
-        console.error("[EMAIL] newDeviceEmail failed:", err?.message || err);
-        throw err;
-    }
+    await sendBrevoEmail({
+        to: email,
+        subject: "New Device Login Detected",
+        text
+    });
 
     await saveAuditSafe(email, "NEW_DEVICE_EMAIL_SENT", { deviceId, ip, geo, riskScore });
+
     return { ok: true };
 }
 
 async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore }) {
     console.log("[EMAIL] sendTokenReuseAlert called", { email, deviceId, ip, geo, riskScore });
 
-    if (!email) throw new Error("Missing required field: email");
+    if (!email) throw new Error("Missing: email");
 
-    const text = `We detected a refresh token reuse attempt.
+    const text = `
+⚠ Security Alert: Token Reuse Detected
 
 Device ID: ${deviceId || "unknown"}
-IP: ${ip || "unknown"}
+IP Address: ${ip || "unknown"}
 Location: ${geo?.country || "unknown"}, ${geo?.city || ""}
 Risk Score: ${riskScore ?? "unknown"}
 
-All sessions have been revoked for your safety.
+We revoked all sessions to protect your account.
 `;
 
-    try {
-        const res = await resend.emails.send({
-            from: "School App <onboarding@resend.dev>",
-            to: email,
-            subject: "Security Alert: Token Reuse Detected",
-            text
-        });
-
-        console.log("[EMAIL] tokenReuseAlert sent successfully", { email, id: res?.id });
-    } catch (err) {
-        console.error("[EMAIL] tokenReuseAlert failed:", err?.message || err);
-        throw err;
-    }
+    await sendBrevoEmail({
+        to: email,
+        subject: "Security Alert: Token Reuse Detected",
+        text
+    });
 
     await saveAuditSafe(email, "TOKEN_REUSE_ALERT_SENT", { deviceId, ip, geo, riskScore });
+
     return { ok: true };
 }
 
@@ -181,12 +200,11 @@ async function saveAuditSafe(userId, event, metadata = {}) {
 
 async function shutdown(signal) {
     try {
-        console.log(`[WORKER] Shutdown signal received (${signal}). Closing worker...`);
+        console.log(`[WORKER] Shutting down (${signal})`);
         await worker.close();
-        console.log("[WORKER] Worker closed gracefully.");
         process.exit(0);
     } catch (err) {
-        console.error("[WORKER] Error during shutdown:", err?.message || err);
+        console.error("[WORKER] Shutdown error:", err?.message || err);
         process.exit(1);
     }
 }
@@ -194,7 +212,10 @@ async function shutdown(signal) {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-process.on("unhandledRejection", reason => console.error("[PROCESS] Unhandled Rejection:", reason));
+process.on("unhandledRejection", reason =>
+    console.error("[PROCESS] Unhandled Rejection:", reason)
+);
+
 process.on("uncaughtException", err => {
     console.error("[PROCESS] Uncaught Exception:", err?.message || err);
     process.exit(1);
