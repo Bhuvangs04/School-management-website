@@ -38,6 +38,9 @@ const startWorker = async () => {
                         case "sendOtpEmail":
                             return await sendOtpEmail(job.data);
 
+                        case "OneTimePassword":
+                            return await OneTimePassword(job.data);
+
                         default:
                             throw new Error(`Unknown job type: ${job.name}`);
                     }
@@ -139,6 +142,22 @@ async function sendBrevoEmail({ to, subject, html }) {
         console.error("[BREVO] Email error:", err?.response?.data || err.message);
         throw err;
     }
+}
+
+async function OneTimePassword({ email, name, role, tempory_password, audit }) {
+    console.log("[EMAIL] OneTimePassword called", { email, name, role, audit });
+    if (!email) throw new Error("Missing: email");
+    const html = getNewDeviceHtml({ email, name, role, tempory_password, });
+    await sendBrevoEmail({
+        to: email,
+        subject: "New Device Login Detected",
+        html
+    });
+
+    await saveAuditSafe({ userId: audit.userId, event: audit.event, metadata: audit.metadata });
+
+    return { ok: true };
+
 }
 
 

@@ -116,6 +116,7 @@ export const resetPassword = async (req, res) => {
 export const verifyToken = async (req, res) => {
     try {
         const token = req.headers.authorization || req.body.token;
+        console.log(token)
         const { payload, user } = await AuthService.verifyAccessTokenAndGetUser(token);
         return res.status(200).json({ success: true, user, payload });
     } catch (err) {
@@ -126,8 +127,6 @@ export const verifyToken = async (req, res) => {
 
 export const changePassword = async (req, res) => {
     try {
-        // Expect: either { userId, oldPassword, newPassword } OR
-        // if authenticated, userId can be taken from req.user (if auth middleware used)
         const { userId, oldPassword, newPassword } = req.body;
         if (!userId || !newPassword) return res.status(400).json({ success: false, message: "userId and newPassword required" });
 

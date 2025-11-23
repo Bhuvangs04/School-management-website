@@ -1,12 +1,10 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 
-/**
- * authenticate: middleware that reads Authorization header, verifies token and attaches req.user
- */
 export const authenticate = async (req, res, next) => {
     try {
         const auth = req.headers.authorization;
+        console.log(auth)
         if (!auth) return res.status(401).json({ success: false, message: "Authorization header required" });
 
         let token = auth;
@@ -23,10 +21,7 @@ export const authenticate = async (req, res, next) => {
     }
 };
 
-/**
- * requireRole: factory returning middleware that asserts the role
- * Usage: app.get('/admin', authenticate, requireRole('super_admin','college_admin'), handler)
- */
+
 export const requireRole = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req.user) return res.status(401).json({ success: false, message: "Unauthenticated" });

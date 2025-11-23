@@ -17,6 +17,7 @@
   "description": "",
   "dependencies": {
     "@pm2/io": "^6.1.0",
+    "amqplib": "^0.10.9",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.64.1",
@@ -31,9 +32,11 @@
     "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.20.1",
+    "morgan": "^1.10.1",
     "nodemailer": "^7.0.10",
     "resend": "^6.5.2",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "winston": "^3.18.3"
   },
   "devDependencies": {
     "jest": "^30.2.0",

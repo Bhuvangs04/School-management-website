@@ -124,6 +124,70 @@ export const getNewDeviceHtml = ({ deviceId, ip, geo, riskScore, approveUrl }) =
   `;
 };
 
+export const getOneTimeEmail = ({ name, email, role, tempory_password }) => {
+  return `
+    <div style="${baseStyles}">
+      <div style="${containerStyle}">
+
+        <!-- HEADER -->
+        <div style="${headerStyle}">
+          Welcome to School App 🎉
+        </div>
+
+        <!-- CONTENT -->
+        <div style="${contentStyle}">
+          <h2 style="margin-top: 0;">Hi ${name || "there"},</h2>
+
+          <p>We're happy to welcome you to the <strong>School Management System</strong>.</p>
+
+          <p>Your account has been successfully created as a 
+            <strong style="color:#4F46E5;">${role?.toUpperCase() || "USER"}</strong>.
+          </p>
+
+          <p>Below are your login credentials:</p>
+
+          <table style="width:100%; margin:20px 0; border-collapse: collapse; background:#f9fafb; border-radius:8px;">
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#4b5563;">Email</td>
+              <td style="padding:12px;">${email}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px; font-weight:bold; color:#4b5563;">Temporary Password</td>
+              <td style="padding:12px;">
+                <span style="font-weight:bold; background:#f3f4f6; padding:6px 12px; border-radius:6px;">
+                  ${tempory_password}
+                </span>
+              </td>
+            </tr>
+          </table>
+
+          <p style="font-size:14px; color:#555;">
+            For security reasons, you will be required to change this password when you first log in.
+          </p>
+
+          <div style="text-align:center; margin-top: 30px;">
+            <a href="${process.env.CLIENT_URL}/auth/login" style="${buttonStyle}">
+              Login to Your Account
+            </a>
+          </div>
+
+          <p style="margin-top:25px; font-size:14px; color:#666;">
+            If you did not request this account, please ignore this email.
+          </p>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="${footerStyle}">
+          &copy; ${new Date().getFullYear()} School App. All rights reserved.
+        </div>
+
+      </div>
+    </div>
+  `;
+};
+
+
+
 export const getTokenReuseHtml = ({ deviceId, ip, geo, riskScore, revokeUrl, revokeAllUrl }) => {
   return `
     <div style="${baseStyles}">

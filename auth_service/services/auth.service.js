@@ -13,6 +13,8 @@ import { metrics } from "../metrics/pm2.metrics.js";
 import Audit from "../models/audit.model.js";
 import { generateActionToken} from "../utils/actionToken.js";
 import ActionToken from "../models/ActionToken.model.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 
 export const registerUser = async ({ name, email, password, role, collegeId }) => {
@@ -363,9 +365,13 @@ export const verifyAccessTokenAndGetUser = async (token) => {
     if (!token) throw new Error("No token provided");
     if (token.startsWith("Bearer ")) token = token.split(" ")[1];
 
+    console.log("Data:", token)
+
     let payload;
     try {
+        console.log(process.env.JWT_SECRET)
         payload = jwt.verify(token, process.env.JWT_SECRET);
+        console.log("PlayLoad", payload)
     } catch (err) {
         throw new Error("Invalid or expired token");
     }
