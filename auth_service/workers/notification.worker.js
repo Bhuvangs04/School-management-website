@@ -6,7 +6,7 @@ const { Worker } = BullMQ;
 import { connection } from "../lib/redis.js";
 import { notificationDLQ, auditQueue } from "../queues/notification.queue.js";
 import Audit from "../models/audit.model.js";
-import { getNewDeviceHtml, getTokenReuseHtml, getOtpHtml } from "../utils/Email.template.js"
+import { getNewDeviceHtml, getTokenReuseHtml, getOtpHtml, getOneTimeEmail } from "../utils/Email.template.js"
 import axios from "axios";
 
 console.log("[EMAIL] Brevo initialized");
@@ -147,10 +147,10 @@ async function sendBrevoEmail({ to, subject, html }) {
 async function OneTimePassword({ email, name, role, tempory_password, audit }) {
     console.log("[EMAIL] OneTimePassword called", { email, name, role, audit });
     if (!email) throw new Error("Missing: email");
-    const html = getNewDeviceHtml({ email, name, role, tempory_password, });
+    const html = getOneTimeEmail({ email, name, role, tempory_password, });
     await sendBrevoEmail({
         to: email,
-        subject: "New Device Login Detected",
+        subject: "New Login OneTimePassword For School management system ",
         html
     });
 
