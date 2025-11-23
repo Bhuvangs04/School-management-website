@@ -1,0 +1,50 @@
+{
+  "name": "college_admin_service",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node test.js",
+    "dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bhuvangs04/School-management-website.git"
+  },
+  "author": "bhuvan g sangappanavar",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bhuvangs04/School-management-website/issues"
+  },
+  "homepage": "https://github.com/Bhuvangs04/School-management-website#readme",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.937.0",
+    "@pm2/io": "^6.1.0",
+    "amqplib": "^0.10.3",
+    "axios": "^1.13.2",
+    "bcrypt": "^6.0.0",
+    "bullmq": "^5.64.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "file-type": "^21.1.1",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.8.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.0.0",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "uuid": "^13.0.0",
+    "winston": "^3.18.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
