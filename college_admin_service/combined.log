@@ -1,0 +1,10 @@
+{"level":"info","message":"MongoDB connected","timestamp":"2025-11-23T14:56:50.718Z"}
+{"level":"info","message":"studentImport worker (streaming) started","timestamp":"2025-11-23T14:56:50.726Z"}
+{"level":"info","message":"MongoDB connected","timestamp":"2025-11-23T15:02:09.684Z"}
+{"level":"info","message":"College Service listening on 5002","timestamp":"2025-11-23T15:02:10.028Z"}
+{"level":"info","message":"Shutting down server...","timestamp":"2025-11-23T15:02:16.617Z"}
+{"level":"info","message":"MongoDB connected","timestamp":"2025-11-23T15:02:21.743Z"}
+{"level":"info","message":"College Service listening on 5002","timestamp":"2025-11-23T15:02:22.122Z"}
+{"level":"info","message":"MongoDB connected","timestamp":"2025-11-23T15:05:16.910Z"}
+{"level":"info","message":"College Service listening on 5002","timestamp":"2025-11-23T15:05:17.249Z"}
+{"level":"info","message":"Shutting down server...","timestamp":"2025-11-23T15:05:19.934Z"}
