@@ -24,8 +24,10 @@ export const registerUser = async ({ name, email, password, role, collegeId }) =
 
     if (role === "college_admin") {
         if (!collegeId) throw new Error("College ID is required for college admin");
+        console.log(collegeId)
 
         const college = await validateCollege(collegeId);
+        console.log(college)
         if (!college) throw new Error("Invalid College ID");
 
         if (college.allowedDomain) {
