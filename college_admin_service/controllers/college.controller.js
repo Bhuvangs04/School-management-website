@@ -222,7 +222,6 @@ export const approveCollege = async (req, res, next) => {
                 collegeId: newCollege._id,
                 code: newCollege.code,
                 name: newCollege.name,
-                allowedDomain: newCollege.allowedDomain,
                 adminEmail: newCollege.contactEmail,
                 adminPhone: newCollege.contactNumber
             });
@@ -235,7 +234,6 @@ export const approveCollege = async (req, res, next) => {
             metadata: {
                 collegeId: newCollege._id,
                 collegeName: newCollege.name,
-                allowedDomain,
                 adminEmail: newCollege.contactEmail
             }
         });
