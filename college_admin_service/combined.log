@@ -8,3 +8,7 @@
 {"level":"info","message":"MongoDB connected","timestamp":"2025-11-23T15:05:16.910Z"}
 {"level":"info","message":"College Service listening on 5002","timestamp":"2025-11-23T15:05:17.249Z"}
 {"level":"info","message":"Shutting down server...","timestamp":"2025-11-23T15:05:19.934Z"}
+{"level":"info","message":"MongoDB connected","timestamp":"2025-11-24T05:56:23.382Z"}
+{"level":"info","message":"College Service listening on 5002","timestamp":"2025-11-24T05:56:23.809Z"}
+{"level":"info","message":"MongoDB connected","timestamp":"2025-11-24T05:58:41.676Z"}
+{"level":"info","message":"College Service listening on 5002","timestamp":"2025-11-24T05:58:42.145Z"}

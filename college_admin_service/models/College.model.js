@@ -12,7 +12,11 @@ const CollegeSchema = new mongoose.Schema({
     address: String,
     contactEmail: String,
     contactNumber: String,
-    departments: [DepartmentSchema],
+    allowedDomain: { type: String },
+    departments: {
+        type: [DepartmentSchema],
+        default: []
+    },
     createdAt: { type: Date, default: Date.now }
 });
 

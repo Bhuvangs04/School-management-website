@@ -124,6 +124,75 @@ export const getNewDeviceHtml = ({ deviceId, ip, geo, riskScore, approveUrl }) =
   `;
 };
 
+export const getCollegeVerificationHtml = ({
+  name,
+  collegeName,
+  phone,
+  verificationLink
+}) => {
+  return `
+    <div style="${baseStyles}">
+      <div style="${containerStyle}">
+
+        <!-- HEADER -->
+        <div style="${headerStyle}">
+          Verify Your College
+        </div>
+
+        <!-- CONTENT -->
+        <div style="${contentStyle}">
+          
+          <h2 style="margin-top: 0;">Hello ${name || "there"},</h2>
+
+          <p>
+            Thank you for submitting the onboarding request for 
+            <strong style="color:#4F46E5;">${collegeName}</strong>.
+          </p>
+
+          <p>
+            Before we proceed, we need to verify your email address to ensure the authenticity of your request.
+          </p>
+
+          <!-- DETAILS CARD -->
+          <table style="width: 100%; margin: 20px 0; border-collapse: collapse; background: #f9fafb; border-radius: 8px;">
+            <tr>
+              <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #4b5563;">
+                College Name
+              </td>
+              <td style="padding: 12px;">${collegeName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; font-weight: bold; color: #4b5563;">
+                Contact Phone
+              </td>
+              <td style="padding: 12px;">${phone || "Not Provided"}</td>
+            </tr>
+          </table>
+
+          <!-- BUTTON -->
+          <div style="text-align:center; margin-top: 30px;">
+            <a href="${verificationLink}" style="${buttonStyle}">
+              Verify Email Now
+            </a>
+          </div>
+
+          <p style="margin-top: 25px; font-size: 14px; color: #666;">
+            If you did not submit this request, you may safely ignore this email.
+          </p>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div style="${footerStyle}">
+          &copy; ${new Date().getFullYear()} School App. All rights reserved.
+        </div>
+
+      </div>
+    </div>
+  `;
+};
+
+
 export const getOneTimeEmail = ({ name, email, role, tempory_password }) => {
   return `
     <div style="${baseStyles}">

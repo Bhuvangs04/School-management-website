@@ -9,7 +9,8 @@ class MQService {
         this.queues = {
             COLLEGE_CREATED: "college_created",
             USER_REGISTERED: "user_registered",
-            ADMIN_ACTION: "admin_action"
+            ADMIN_ACTION: "admin_action",
+            COLLEGE_CREATED_FIRST_EMAIL: "college_email_verification"
         };
     }
 
@@ -17,6 +18,17 @@ class MQService {
 
     async publishCollegeCreated(collegeData) {
         const ok = await rabbitMQ.publish(this.queues.COLLEGE_CREATED, collegeData);
+
+        if (!ok) {
+            logger.error(`[RMQ] FAILED → college_created for ${collegeData.name}`);
+            return;
+        }
+
+        logger.info(`[RMQ] Published college_created for ${collegeData.name}`);
+    }
+
+    async publishSendCollegeVerificationEmail(collegeData) {
+        const ok = await rabbitMQ.publish(this.queues.COLLEGE_CREATED_FIRST_EMAIL, collegeData);
 
         if (!ok) {
             logger.error(`[RMQ] FAILED → college_created for ${collegeData.name}`);

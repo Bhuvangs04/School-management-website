@@ -36,10 +36,7 @@ const worker = new Worker("retryReportQueue", async job => {
     logger.info(`Report retry successful for job ${uploadJobId}`);
     return { ok: true, reportPath: reportRef };
 }, {
-    connection: {
-        host: process.env.REDIS_HOST || "127.0.0.1",
-        port: parseInt(process.env.REDIS_PORT || "6379", 10)
-    }
+    connection
 });
 
 worker.on("failed", (job, err) => {

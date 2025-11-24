@@ -13,6 +13,7 @@ import { metrics } from "../metrics/pm2.metrics.js";
 import Audit from "../models/audit.model.js";
 import { generateActionToken} from "../utils/actionToken.js";
 import ActionToken from "../models/ActionToken.model.js";
+import { validateCollege } from "./college.service.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -20,6 +21,20 @@ dotenv.config();
 export const registerUser = async ({ name, email, password, role, collegeId }) => {
     let userExist = await User.findOne({ email });
     if (userExist) throw new Error("Email already exists");
+
+    if (role === "college_admin") {
+        if (!collegeId) throw new Error("College ID is required for college admin");
+
+        const college = await validateCollege(collegeId);
+        if (!college) throw new Error("Invalid College ID");
+
+        if (college.allowedDomain) {
+            const emailDomain = email.split("@")[1];
+            if (emailDomain !== college.allowedDomain) {
+                throw new Error(`Email must be from ${college.allowedDomain}`);
+            }
+        }
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
 

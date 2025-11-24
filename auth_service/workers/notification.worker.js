@@ -6,7 +6,7 @@ const { Worker } = BullMQ;
 import { connection } from "../lib/redis.js";
 import { notificationDLQ, auditQueue } from "../queues/notification.queue.js";
 import Audit from "../models/audit.model.js";
-import { getNewDeviceHtml, getTokenReuseHtml, getOtpHtml, getOneTimeEmail } from "../utils/Email.template.js"
+import { getNewDeviceHtml, getTokenReuseHtml, getOtpHtml, getOneTimeEmail, getCollegeVerificationHtml } from "../utils/Email.template.js"
 import axios from "axios";
 
 console.log("[EMAIL] Brevo initialized");
@@ -40,6 +40,10 @@ const startWorker = async () => {
 
                         case "OneTimePassword":
                             return await OneTimePassword(job.data);
+
+                        case "CollegeVerificationEmail":
+                            console.log("[WORKER] Sending college verification email...");
+                            return await sendCollegeVerificationEmail(job.data);
 
                         default:
                             throw new Error(`Unknown job type: ${job.name}`);
@@ -159,6 +163,39 @@ async function OneTimePassword({ email, name, role, tempory_password, audit }) {
     return { ok: true };
 
 }
+
+async function sendCollegeVerificationEmail({
+    email,
+    phone,
+    name,
+    collegeName,
+    verificationLink,
+    audit
+}) {
+    console.log("[EMAIL] sendCollegeVerificationEmail =>", { email });
+
+    if (!email || !verificationLink)
+        throw new Error("Missing: email or verificationLink");
+
+    const html = getCollegeVerificationHtml({
+        name,
+        collegeName,
+        phone,
+        verificationLink
+    });
+
+    await sendBrevoEmail({
+        to: email,
+        subject: "Verify Your College Application – School Management System",
+        html
+    });
+
+    await saveAuditSafe(audit?.userId, audit?.event, audit?.metadata);
+
+    return { ok: true };
+}
+
+
 
 
 async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore, approveUrl }) {

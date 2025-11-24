@@ -7,23 +7,65 @@ const userSchema = new mongoose.Schema(
             trim: true
         },
         email: {
-            type: String, required: true, unique: true, lowercase: true,
+            type: String,
+            required: true,
+            unique: true,
+            lowercase: true,
             trim: true
         },
-        passwordHash: { type: String, required: true },
-        role: { type: String, enum: ["super_admin", "college_admin", "teacher", "student", "parent"], required: true },
-        collegeId: { type: String, default: null },
-        studentId: { type: String, default: null },
-        passwordChanged: { type: Boolean, default: false },
-        resetOtp: { type: String, default: null },
-        resetOtpExp: { type: Date, default: null },
-        sessionsCount: { type: Number, default: 0 },
-        lastLoginAt: { type: Date, default: null },
-        parentOf: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
-        }]
-        
+        phone: {
+            type: String,
+            default: null,
+            trim: true
+        },
+        passwordHash: {
+            type: String,
+            required: true
+        },
+        role: {
+            type: String,
+            enum: ["super_admin", "college_admin", "teacher", "student", "parent"],
+            required: true
+        },
+        collegeId: {
+            type: mongoose.Schema.Types.ObjectId,   // better than String
+            ref: "College",
+            default: null
+        },
+        code: {
+            type: String,
+            default: null
+        },
+        studentId: {
+            type: String,
+            default: null
+        },
+        passwordChanged: {
+            type: Boolean,
+            default: false
+        },
+        resetOtp: {
+            type: String,
+            default: null
+        },
+        resetOtpExp: {
+            type: Date,
+            default: null
+        },
+        sessionsCount: {
+            type: Number,
+            default: 0
+        },
+        lastLoginAt: {
+            type: Date,
+            default: null
+        },
+        parentOf: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User"
+            }
+        ]
     },
     { timestamps: true }
 );

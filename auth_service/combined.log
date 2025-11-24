@@ -397,3 +397,102 @@
 {"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student50@example.com","timestamp":"2025-11-23T14:46:45.241Z"}
 {"level":"info","message":"[AUTH] User created in Auth DB → student50@example.com","timestamp":"2025-11-23T14:46:45.425Z"}
 {"level":"info","message":"[AUTH] Email job queued for student50@example.com","timestamp":"2025-11-23T14:46:45.497Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student501@example.com","timestamp":"2025-11-23T15:12:44.639Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student501@example.com","timestamp":"2025-11-23T15:12:45.613Z"}
+{"level":"info","message":"[AUTH] Email job queued for student501@example.com","timestamp":"2025-11-23T15:12:45.813Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent2@example.com","timestamp":"2025-11-23T15:12:47.968Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent2@example.com","timestamp":"2025-11-23T15:12:48.166Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent2@example.com","timestamp":"2025-11-23T15:12:48.228Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student4@example.com","timestamp":"2025-11-23T15:12:51.574Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student4@example.com","timestamp":"2025-11-23T15:12:51.777Z"}
+{"level":"info","message":"[AUTH] Email job queued for student4@example.com","timestamp":"2025-11-23T15:12:51.839Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent5@example.com","timestamp":"2025-11-23T15:12:54.907Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent5@example.com","timestamp":"2025-11-23T15:12:55.106Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent5@example.com","timestamp":"2025-11-23T15:12:55.168Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student7@example.com","timestamp":"2025-11-23T15:12:58.513Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student7@example.com","timestamp":"2025-11-23T15:12:58.712Z"}
+{"level":"info","message":"[AUTH] Email job queued for student7@example.com","timestamp":"2025-11-23T15:12:58.774Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent8@example.com","timestamp":"2025-11-23T15:13:01.844Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent8@example.com","timestamp":"2025-11-23T15:13:02.053Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent8@example.com","timestamp":"2025-11-23T15:13:02.119Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student10@example.com","timestamp":"2025-11-23T15:13:05.444Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student10@example.com","timestamp":"2025-11-23T15:13:05.642Z"}
+{"level":"info","message":"[AUTH] Email job queued for student10@example.com","timestamp":"2025-11-23T15:13:05.703Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent11@example.com","timestamp":"2025-11-23T15:13:08.790Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent11@example.com","timestamp":"2025-11-23T15:13:09.007Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent11@example.com","timestamp":"2025-11-23T15:13:09.068Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student13@example.com","timestamp":"2025-11-23T15:13:12.377Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student13@example.com","timestamp":"2025-11-23T15:13:12.587Z"}
+{"level":"info","message":"[AUTH] Email job queued for student13@example.com","timestamp":"2025-11-23T15:13:12.650Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent14@example.com","timestamp":"2025-11-23T15:13:15.712Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent14@example.com","timestamp":"2025-11-23T15:13:15.911Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent14@example.com","timestamp":"2025-11-23T15:13:15.972Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student16@example.com","timestamp":"2025-11-23T15:13:19.312Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student16@example.com","timestamp":"2025-11-23T15:13:19.595Z"}
+{"level":"info","message":"[AUTH] Email job queued for student16@example.com","timestamp":"2025-11-23T15:13:19.658Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent17@example.com","timestamp":"2025-11-23T15:13:22.650Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent17@example.com","timestamp":"2025-11-23T15:13:22.849Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent17@example.com","timestamp":"2025-11-23T15:13:22.909Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student19@example.com","timestamp":"2025-11-23T15:13:26.244Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student19@example.com","timestamp":"2025-11-23T15:13:26.484Z"}
+{"level":"info","message":"[AUTH] Email job queued for student19@example.com","timestamp":"2025-11-23T15:13:26.549Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent20@example.com","timestamp":"2025-11-23T15:13:29.657Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent20@example.com","timestamp":"2025-11-23T15:13:29.933Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent20@example.com","timestamp":"2025-11-23T15:13:29.994Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student22@example.com","timestamp":"2025-11-23T15:13:33.242Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student22@example.com","timestamp":"2025-11-23T15:13:33.470Z"}
+{"level":"info","message":"[AUTH] Email job queued for student22@example.com","timestamp":"2025-11-23T15:13:33.530Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent23@example.com","timestamp":"2025-11-23T15:13:36.500Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent23@example.com","timestamp":"2025-11-23T15:13:36.724Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent23@example.com","timestamp":"2025-11-23T15:13:36.785Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student25@example.com","timestamp":"2025-11-23T15:13:40.102Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student25@example.com","timestamp":"2025-11-23T15:13:40.309Z"}
+{"level":"info","message":"[AUTH] Email job queued for student25@example.com","timestamp":"2025-11-23T15:13:40.370Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent26@example.com","timestamp":"2025-11-23T15:13:43.432Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent26@example.com","timestamp":"2025-11-23T15:13:43.631Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent26@example.com","timestamp":"2025-11-23T15:13:43.692Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student28@example.com","timestamp":"2025-11-23T15:13:47.035Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student28@example.com","timestamp":"2025-11-23T15:13:47.239Z"}
+{"level":"info","message":"[AUTH] Email job queued for student28@example.com","timestamp":"2025-11-23T15:13:47.299Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent29@example.com","timestamp":"2025-11-23T15:13:50.366Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent29@example.com","timestamp":"2025-11-23T15:13:50.559Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent29@example.com","timestamp":"2025-11-23T15:13:50.620Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student31@example.com","timestamp":"2025-11-23T15:13:53.982Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student31@example.com","timestamp":"2025-11-23T15:13:54.292Z"}
+{"level":"info","message":"[AUTH] Email job queued for student31@example.com","timestamp":"2025-11-23T15:13:54.354Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent32@example.com","timestamp":"2025-11-23T15:13:57.292Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent32@example.com","timestamp":"2025-11-23T15:13:57.481Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent32@example.com","timestamp":"2025-11-23T15:13:57.542Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student34@example.com","timestamp":"2025-11-23T15:14:00.894Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student34@example.com","timestamp":"2025-11-23T15:14:01.093Z"}
+{"level":"info","message":"[AUTH] Email job queued for student34@example.com","timestamp":"2025-11-23T15:14:01.156Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent35@example.com","timestamp":"2025-11-23T15:14:04.223Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent35@example.com","timestamp":"2025-11-23T15:14:04.413Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent35@example.com","timestamp":"2025-11-23T15:14:04.475Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student37@example.com","timestamp":"2025-11-23T15:14:07.828Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student37@example.com","timestamp":"2025-11-23T15:14:08.161Z"}
+{"level":"info","message":"[AUTH] Email job queued for student37@example.com","timestamp":"2025-11-23T15:14:08.226Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent38@example.com","timestamp":"2025-11-23T15:14:11.175Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent38@example.com","timestamp":"2025-11-23T15:14:11.377Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent38@example.com","timestamp":"2025-11-23T15:14:11.442Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student40@example.com","timestamp":"2025-11-23T15:14:14.798Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student40@example.com","timestamp":"2025-11-23T15:14:14.997Z"}
+{"level":"info","message":"[AUTH] Email job queued for student40@example.com","timestamp":"2025-11-23T15:14:15.059Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent41@example.com","timestamp":"2025-11-23T15:14:18.129Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent41@example.com","timestamp":"2025-11-23T15:14:18.325Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent41@example.com","timestamp":"2025-11-23T15:14:18.387Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student43@example.com","timestamp":"2025-11-23T15:14:21.734Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student43@example.com","timestamp":"2025-11-23T15:14:21.930Z"}
+{"level":"info","message":"[AUTH] Email job queued for student43@example.com","timestamp":"2025-11-23T15:14:21.991Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent44@example.com","timestamp":"2025-11-23T15:14:25.061Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent44@example.com","timestamp":"2025-11-23T15:14:25.260Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent44@example.com","timestamp":"2025-11-23T15:14:25.321Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student46@example.com","timestamp":"2025-11-23T15:14:28.662Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student46@example.com","timestamp":"2025-11-23T15:14:28.881Z"}
+{"level":"info","message":"[AUTH] Email job queued for student46@example.com","timestamp":"2025-11-23T15:14:28.943Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for parent47@example.com","timestamp":"2025-11-23T15:14:32.020Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → parent47@example.com","timestamp":"2025-11-23T15:14:32.234Z"}
+{"level":"info","message":"[AUTH] Email job queued for parent47@example.com","timestamp":"2025-11-23T15:14:32.311Z"}
+{"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student49@example.com","timestamp":"2025-11-23T15:14:35.594Z"}
+{"level":"info","message":"[AUTH] User created in Auth DB → student49@example.com","timestamp":"2025-11-23T15:14:35.782Z"}
+{"level":"info","message":"[AUTH] Email job queued for student49@example.com","timestamp":"2025-11-23T15:14:35.844Z"}
