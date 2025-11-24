@@ -9,7 +9,7 @@ export const createCollege = async (data) => {
 
 
 export const getCollegeById = async (id) => {
-    const college = await College.findOne({ code: id });
+    const college = await College.findById(id);
     if (!college) throw new Error("College not found");
     return college;
 };
