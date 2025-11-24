@@ -20,7 +20,7 @@ const router = express.Router();
 // Public routes (or protect if needed)
 router.post("/apply", applyForCollege);
 router.get("/verify-email", verifyCollegeEmail);
-router.get("/:id", getCollege);
+router.get("/:id", validate(getByIdSchema), getCollege);
 
 // Protected routes
 router.use(verifyAccess);
