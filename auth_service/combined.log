@@ -496,3 +496,7 @@
 {"level":"info","message":"[RABBITMQ] USER_REGISTERED event received for student49@example.com","timestamp":"2025-11-23T15:14:35.594Z"}
 {"level":"info","message":"[AUTH] User created in Auth DB → student49@example.com","timestamp":"2025-11-23T15:14:35.782Z"}
 {"level":"info","message":"[AUTH] Email job queued for student49@example.com","timestamp":"2025-11-23T15:14:35.844Z"}
+{"level":"info","message":"[RMQ] COLLEGE_EMAIL_VERIFICATION → bhuvangs.btech23@rvu.edu.in","timestamp":"2025-11-24T07:01:38.489Z"}
+{"level":"info","message":"[AUTH] Verification email queued → bhuvangs.btech23@rvu.edu.in","timestamp":"2025-11-24T07:01:38.668Z"}
+{"level":"info","message":"[RMQ] COLLEGE_CREATED received → RV University","timestamp":"2025-11-24T07:02:05.290Z"}
+{"level":"error","message":"[AUTH] Error in COLLEGE_CREATED: E11000 duplicate key error collection: test.users index: email_1 dup key: { email: \"bhuvangs.btech23@rvu.edu.in\" }","timestamp":"2025-11-24T07:02:05.598Z"}

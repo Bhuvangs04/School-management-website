@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
-import actionRoutes from "./routes/action.route.js";
+import actionRoutes from "./routes/action.routes.js";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import io from "@pm2/io";

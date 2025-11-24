@@ -1,0 +1,1 @@
+{"level":"error","message":"[AUTH] Error in COLLEGE_CREATED: E11000 duplicate key error collection: test.users index: email_1 dup key: { email: \"bhuvangs.btech23@rvu.edu.in\" }","timestamp":"2025-11-24T07:02:05.598Z"}
