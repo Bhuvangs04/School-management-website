@@ -190,7 +190,7 @@ async function sendCollegeVerificationEmail({
         html
     });
 
-    await saveAuditSafe(audit?.userId, audit?.event, audit?.metadata);
+    await saveAuditSafe({ userId: audit.userId, event: audit.event, metadata: audit.metadata });
 
     return { ok: true };
 }

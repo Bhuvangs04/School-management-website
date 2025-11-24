@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { blacklistJTI } from "../utils/redisBlacklist.js";
 import RefreshSession from "../models/refreshSession.model.js";
 import { generateAccessToken } from "../utils/jwt.js";
 import { hashToken, createRefreshToken, generateJTI } from "../utils/crypto.js";
@@ -241,6 +242,9 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
                     { userId: user._id },
                     { $set: { isRevoked: true, revokedAt: new Date() } }
                 );
+                const all = await RefreshSession.find({ userId: user._id }).lean();
+                for (const s of all) if (s.jti) await blacklistJTI(s.jti, s.expiresAt);
+
                 await handleSecurityEvent('REVOKED_ACCESS', currentSession, riskScore);
             }
         } catch (err) {
@@ -250,8 +254,16 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
 
     if (session.isRevoked) {
         const riskScore = computeRiskScore({ geo, userAgent, ip, lastSession: session });
+        try {
+            if (session.jti) {
+                const ttlSec = Math.max(1, Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000));
+                if (ttlSec > 0) await blacklistJTI(session.jti, ttlSec);
+                await Audit.create({ userId: session.userId, event: "JTI_BLACKLISTED", metadata: { jti: session.jti, reason: "token_reuse" } });
+            }
+        } catch (err) {
+            console.error("[SECURITY] failed to blacklist jti:", err);
+        }        
         handleSecurityEvent('REVOKED_ACCESS', session, riskScore);
-
         metrics.tokenReuseDetected.inc?.();
         throw new Error("Session revoked. Possible token theft.");
     }
@@ -265,6 +277,15 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
     if (session.refreshTokenHash !== oldHash) {
         const riskScore = computeRiskScore({ geo, userAgent, ip, lastSession: session });
 
+        try {
+            if (session.jti) {
+                const ttlSec = Math.max(1, Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000));
+                if (ttlSec > 0) await blacklistJTI(session.jti, ttlSec);
+                await Audit.create({ userId: session.userId, event: "JTI_BLACKLISTED", metadata: { jti: session.jti, reason: "token_reuse" } });
+            }
+        } catch (err) {
+            console.error("[SECURITY] failed to blacklist jti:", err);
+        }
         handleSecurityEvent('TOKEN_REUSE', session, riskScore);
 
         metrics.tokenReuseDetected.inc?.();
@@ -314,6 +335,8 @@ export const revokeRefreshTokenForUser = async (plainRefreshToken) => {
     for (const s of sessions) {
         s.isRevoked = true;
         await s.save();
+        if (s.jti) await blacklistJTI(s.jti, s.expiresAt);
+
     }
     return;
 }
@@ -330,7 +353,6 @@ export const sendOtp = async (email) => {
     user.resetOtpExp = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    // push OTP email job to queue
     await notificationQueue.add(
         "sendOtpEmail",
         {

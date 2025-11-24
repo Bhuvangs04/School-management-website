@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import { isJtiBlacklisted } from "../utils/redisBlacklist.js";
+
 
 export const authenticate = async (req, res, next) => {
     try {
@@ -11,6 +13,10 @@ export const authenticate = async (req, res, next) => {
         if (auth.startsWith("Bearer ")) token = auth.split(" ")[1];
 
         const payload = jwt.verify(token, process.env.JWT_SECRET);
+        if (payload?.jti) {
+            const blocked = await isJtiBlacklisted(payload.jti);
+            if (blocked) throw new Error("Token revoked or invalidated");
+        }
         const user = await User.findById(payload.userId).select("-passwordHash -resetOtp -resetOtpExp -refreshToken");
         if (!user) return res.status(401).json({ success: false, message: "Invalid token user" });
 
