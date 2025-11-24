@@ -4,7 +4,7 @@ const COLLEGE_SERVICE_URL = process.env.COLLEGE_SERVICE_URL || "https://school-m
 
 export const validateCollege = async (collegeId) => {
     try {
-        const response = await axios.get(`${COLLEGE_SERVICE_URL}/${collegeId}`);
+        const response = await axios.get(`${COLLEGE_SERVICE_URL}/public/${collegeId}`);
         return response.data.college;
     } catch (err) {
         if (err.response && err.response.status === 404) {
