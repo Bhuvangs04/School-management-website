@@ -20,14 +20,14 @@ const router = express.Router();
 // Public routes (or protect if needed)
 router.post("/apply", applyForCollege);
 router.get("/verify-email", verifyCollegeEmail);
-router.get("/:id", validate(getByIdSchema), getCollege);
+router.get("/public/:id", validate(getByIdSchema), getCollege);
 
 // Protected routes
 router.use(verifyAccess);
-router.get("/applications", requireRole("super_admin"), getApplications);
-router.post("/approve", requireRole("super_admin"), approveCollege);
-router.post("/", requireRole("super_admin"), validate(createCollegeSchema), createCollege);
-router.put("/:id", requireRole("super_admin"), validate(updateCollegeSchema), updateCollege);
-router.delete("/:id", requireRole("super_admin"), validate(getByIdSchema), deleteCollege);
+router.get("/admin-only/applications", requireRole("super_admin"), getApplications);
+router.post("/admin/approve", requireRole("super_admin"), approveCollege);
+router.post("/admin/create-college", requireRole("super_admin"), validate(createCollegeSchema), createCollege);
+router.put("/admin/edit/:id", requireRole("super_admin"), validate(updateCollegeSchema), updateCollege);
+router.delete("/admin/remove/:id", requireRole("super_admin"), validate(getByIdSchema), deleteCollege);
 
 export default router;
