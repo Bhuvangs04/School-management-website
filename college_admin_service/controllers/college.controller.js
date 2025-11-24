@@ -40,10 +40,10 @@ export const applyForCollege = async (req, res, next) => {
             phone: data.requestedBy.phone,
             name: data.requestedBy.name,
             collegeName: data.collegeName,
-            verificationLink: `http://localhost:5000/api/college/verify-email?token=${verificationToken}`
+            verificationLink: `https://school-management-website-production-8b72.up.railway.app/api/college/verify-email?token=${verificationToken}`
         }
 
-        console.log(`[MOCK EMAIL] Verify at: http://localhost:5000/api/college/verify-email?token=${verificationToken}`);
+        console.log(`[MOCK EMAIL] Verify at: https://school-management-website-production-8b72.up.railway.app/api/college/verify-email?token=${verificationToken}`);
 
         await MQService.publishSendCollegeVerificationEmail(required_data)
 
