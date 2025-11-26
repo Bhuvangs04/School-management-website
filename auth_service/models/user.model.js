@@ -28,8 +28,8 @@ const userSchema = new mongoose.Schema(
             required: true
         },
         collegeId: {
-            type: mongoose.Schema.Types.ObjectId,   // better than String
-            ref: "College",
+            type: String,
+            // ref: "College",
             default: null
         },
         code: {
