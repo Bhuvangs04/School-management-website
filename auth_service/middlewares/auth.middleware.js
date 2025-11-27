@@ -2,38 +2,45 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import { isJtiBlacklisted } from "../utils/redisBlacklist.js";
 
-
 export const authenticate = async (req, res, next) => {
     try {
         const auth = req.headers.authorization;
-        console.log(auth)
-        if (!auth) return res.status(401).json({ success: false, message: "Authorization header required" });
 
-        let token = auth;
-        if (auth.startsWith("Bearer ")) token = auth.split(" ")[1];
+        if (!auth || !auth.startsWith("Bearer ")) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
 
-        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        const token = auth.split(" ")[1];
+
+        let payload;
+        try {
+            payload = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
         if (payload?.jti) {
             const blocked = await isJtiBlacklisted(payload.jti);
-            if (blocked) return res.status(401).json({ success: false, message: "Invalid token user" });
+            if (blocked) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
         }
-        const user = await User.findById(payload.userId).select("-passwordHash -resetOtp -resetOtpExp -refreshToken");
-        if (!user) return res.status(401).json({ success: false, message: "Invalid token user" });
 
-        req.user = { id: user._id.toString(), role: user.role, collegeId: user.collegeId };
+        const user = await User.findById(payload.userId)
+            .select("-passwordHash -resetOtp -resetOtpExp -refreshToken");
+
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
+        req.user = {
+            id: user._id.toString(),
+            role: user.role,
+            collegeId: user.collegeId
+        };
+
         next();
     } catch (err) {
-        return res.status(401).json({ success: false, message: err.message });
+        return res.status(401).json({ success: false, message: "Unauthorized" });
     }
-};
-
-
-export const requireRole = (...allowedRoles) => {
-    return (req, res, next) => {
-        if (!req.user) return res.status(401).json({ success: false, message: "Unauthenticated" });
-        if (!allowedRoles.includes(req.user.role)) {
-            return res.status(403).json({ success: false, message: "Forbidden: insufficient role" });
-        }
-        next();
-    };
 };
