@@ -15,7 +15,7 @@ export const authenticate = async (req, res, next) => {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
         if (payload?.jti) {
             const blocked = await isJtiBlacklisted(payload.jti);
-            if (blocked) throw new Error("Token revoked or invalidated");
+            if (blocked) return res.status(401).json({ success: false, message: "Invalid token user" });
         }
         const user = await User.findById(payload.userId).select("-passwordHash -resetOtp -resetOtpExp -refreshToken");
         if (!user) return res.status(401).json({ success: false, message: "Invalid token user" });
