@@ -153,7 +153,7 @@ export const loginUser = async ({ email, password, ip, userAgent }) => {
                 });
 
                 await ActionToken.create({ tokenId: approveTokenId });
-                const approveUrl = `${process.env.CLIENT_URL}/auth/action?token=${approveToken}`;
+                const approveUrl = `${process.env.CLIENT_URL}/action/capture/?token=${approveToken}`;
 
                 await notificationQueue.add("newDeviceEmail", {
                     userId: user._id,
@@ -227,8 +227,8 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
                     ActionToken.create({ tokenId: revokeAllTokenId })
                 ]);
 
-                const revokeUrl = `${process.env.CLIENT_URL}/auth/action?token=${revokeToken}`;
-                const revokeAllUrl = `${process.env.CLIENT_URL}/auth/action?token=${revokeAllToken}`;
+                const revokeUrl = `${process.env.CLIENT_URL}/action/capture?token=${revokeToken}`;
+                const revokeAllUrl = `${process.env.CLIENT_URL}/action/capture?token=${revokeAllToken}`;
 
                 await notificationQueue.add("tokenReuseAlert", {
                     userId: user._id, email: user.email, deviceId: currentSession.deviceId,

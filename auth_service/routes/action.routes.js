@@ -5,7 +5,7 @@ import ActionToken from "../models/ActionToken.model.js";
 
 const router = express.Router();
 
-router.get("/action", async (req, res) => {
+router.get("/capture", async (req, res) => {
     try {
         const token = req.query.token;
         if (!token) return res.status(400).send("Missing token");

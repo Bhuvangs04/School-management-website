@@ -41,7 +41,7 @@ app.use("/auth/send-otp", loginLimiter);
 
 
 app.use("/auth", authRoutes);
-app.use("/auth", actionRoutes);
+app.use("/action", actionRoutes);
 
 
 app.listen(process.env.PORT, async () => {
