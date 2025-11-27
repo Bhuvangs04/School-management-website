@@ -4,16 +4,19 @@ import logger from '../utils/logger.js';
 const validate = (schema) => (req, res, next) => {
     try {
         const { body, query, params } = req;
+
         const result = schema.parse({
             body,
             query,
             params,
         });
 
-        // Replace req values with parsed/validated values
+        // Overwrite only what's safe
         req.body = result.body;
-        req.query = result.query;
         req.params = result.params;
+
+        // For query, store in custom field
+        req.validatedQuery = result.query;
 
         next();
     } catch (error) {
