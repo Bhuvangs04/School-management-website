@@ -158,7 +158,7 @@ async function OneTimePassword({ email, name, role, tempory_password, audit }) {
         html
     });
 
-    await saveAuditSafe({ userId: audit.userId, event: audit.event, metadata: audit.metadata });
+    await saveAuditSafe(audit.userId, audit.event, audit.metadata);
 
     return { ok: true };
 
@@ -190,7 +190,7 @@ async function sendCollegeVerificationEmail({
         html
     });
 
-    await saveAuditSafe({ userId: audit.userId, event: audit.event, metadata: audit.metadata });
+    await saveAuditSafe(audit.userId, audit.event, audit.metadata);
 
     return { ok: true };
 }
