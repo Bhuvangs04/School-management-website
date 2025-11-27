@@ -258,7 +258,7 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
             if (session.jti) {
                 const ttlSec = Math.max(1, Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000));
                 if (ttlSec > 0) await blacklistJTI(session.jti, ttlSec);
-                await Audit.create({ userId: session.userId, event: "JTI_BLACKLISTED", metadata: { jti: session.jti, reason: "token_reuse" } });
+                await Audit.create({ userId: session.userId._id?.toString() || session.userId.toString(), event: "JTI_BLACKLISTED", metadata: { jti: session.jti, reason: "token_reuse" } });
             }
         } catch (err) {
             console.error("[SECURITY] failed to blacklist jti:", err);
@@ -281,7 +281,7 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
             if (session.jti) {
                 const ttlSec = Math.max(1, Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000));
                 if (ttlSec > 0) await blacklistJTI(session.jti, ttlSec);
-                await Audit.create({ userId: session.userId, event: "JTI_BLACKLISTED", metadata: { jti: session.jti, reason: "token_reuse" } });
+                await Audit.create({ userId: session.userId._id?.toString() || session.userId.toString(), event: "JTI_BLACKLISTED", metadata: { jti: session.jti, reason: "token_reuse" } });
             }
         } catch (err) {
             console.error("[SECURITY] failed to blacklist jti:", err);
