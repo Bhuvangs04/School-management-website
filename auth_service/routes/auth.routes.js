@@ -9,8 +9,9 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/refresh", refreshToken);
 
-router.use(authenticate)
 router.post("/send-otp", sendOtp);
+
+router.use(authenticate)
 router.post("/reset-password", resetPassword);
 router.post("/verify", verifyToken); 
 router.put("/change-password", changePassword);
