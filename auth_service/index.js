@@ -32,12 +32,12 @@ app.use(cors());
 app.use(helmet());
 app.set
 
-const loginLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 5,
-});
-app.use("/auth/login", loginLimiter);
-app.use("/auth/send-otp", loginLimiter);
+// const loginLimiter = rateLimit({
+//     windowMs: 60 * 1000,
+//     max: 5,
+// });
+// app.use("/auth/login", loginLimiter);
+// app.use("/auth/send-otp", loginLimiter);
 
 
 app.use("/auth", authRoutes);
