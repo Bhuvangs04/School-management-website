@@ -40,8 +40,8 @@ await rabbitMQ.connect();
 
 // Routes
 app.get("/health", (req, res) => res.json({ ok: true }));
-app.use("/api/college", collegeRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/college", collegeRoutes);
+app.use("/admin", adminRoutes);
 
 // Directories
 const uploadDir = process.env.UPLOAD_DIR || "./uploads";
