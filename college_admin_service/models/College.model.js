@@ -12,11 +12,18 @@ const CollegeSchema = new mongoose.Schema({
     address: String,
     contactEmail: String,
     contactNumber: String,
+    status: { type: String, enum: ["ACTIVE", "DELETING ", "DELETED"] },
+    deletedAt: { type: Date, default: null },
+    recoverUntil: { type: Date, default: null },
     allowedDomain: { type: String },
     departments: {
         type: [DepartmentSchema],
         default: []
     },
+    RecoverToken: {
+        type: String, default: null, index: true
+    },
+    recoverTokenExpiresAt: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now }
 });
 

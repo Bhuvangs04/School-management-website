@@ -6,12 +6,14 @@ import {
     applyForCollege,
     verifyCollegeEmail,
     getApplications,
-    approveCollege
+    approveCollege,
+    recoverCollege
 } from "../controllers/college.controller.js";
 import validate from "../middleware/validate.js";
 import { createCollegeSchema, updateCollegeSchema, getByIdSchema } from "../utils/validationSchemas.js";
 import verifyAccess from "../middleware/verifyAccess.js";
 import requireRole from "../middleware/requireRole.js";
+import { recoveryRateLimit } from "../middleware/recoveryRateLimit.js";
 import express from "express";
 
 const router = express.Router();
@@ -21,6 +23,8 @@ const router = express.Router();
 router.post("/apply", applyForCollege);
 router.get("/verify-email", verifyCollegeEmail);
 router.get("/:id", validate(getByIdSchema), getCollege);
+router.post("/admin/recover", recoveryRateLimit({ maxAttempts: 5 }), recoverCollege,);
+
 
 // Protected routes
 router.use(verifyAccess);

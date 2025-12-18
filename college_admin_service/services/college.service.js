@@ -1,4 +1,9 @@
 import College from "../models/College.model.js";
+import MQService from "../services/mq.service.js";
+import crypto from "crypto";
+
+
+
 
 export const createCollege = async (data) => {
     const exist = await College.findOne({ code: data.code });
@@ -19,5 +24,74 @@ export const updateCollege = async (id, data) => {
 };
 
 export const deleteCollege = async (id) => {
-    return await College.findByIdAndDelete(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new Error("Invalid college ID");
+    }
+    const college = await College.findById(id);
+    if (!college) {
+        throw new Error("College Not Found");
+    }
+    if (college.status === "DELETING") {
+        return {
+            message: "College deletion already in progress",
+            recoverUntil: college.recoverUntil
+        };
+    }
+
+    const now = new Date();
+    const recoverUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const RecoverToken = crypto.randomBytes(32).toString("hex");
+
+    college.status = "DELETING";
+    college.recoverUntil = recoverUntil;
+    college.deletedAt = now;
+    college.RecoverToken = RecoverToken;
+    college.recoverTokenExpiresAt = recoverUntil;
+
+    await college.save();
+
+    await MQService.publishCollegeDeletion({
+        collegeId: college.code.toString(),
+        collegeName: college.name,
+        adminEmail: college.contactEmail,
+        recoverUntil,
+        RecoverToken
+    });
+
+
+    return {
+        message: "College scheduled for deletion",
+    };
+};
+
+
+export const recoverCollege = async (token) => {
+    const college = await College.findOne({
+        RecoverToken: token,
+        recoverTokenExpiresAt: { $gt: new Date() },
+        status: "DELETING"
+    });
+    if (!college) {
+        throw new Error("Invalid or expired recovery token");
+    }
+    college.status = "ACTIVE";
+    college.deletedAt = null;
+    college.recoverUntil = null;
+    college.RecoverToken = null;
+    college.recoverTokenExpiresAt = null;
+
+    await college.save();
+
+
+    await MQService.publishCollegeRecover({
+        collegeId: college.code.toString(),
+        collegeName: college.name,
+        adminEmail: college.contactEmail,
+        recover: "true"
+    });
+
+
+    return {
+        message: "College scheduled for deletion",
+    };
 };

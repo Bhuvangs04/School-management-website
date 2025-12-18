@@ -1,6 +1,7 @@
 import rabbitMQ from "../utils/rabbitmq.js";
 import logger from "../utils/logger.js";
 
+
 // Ensure RMQ connection is established ONCE
 await rabbitMQ.connect();
 
@@ -10,7 +11,9 @@ class MQService {
             COLLEGE_CREATED: "college_created",
             USER_REGISTERED: "user_registered",
             ADMIN_ACTION: "admin_action",
-            COLLEGE_CREATED_FIRST_EMAIL: "college_email_verification"
+            COLLEGE_CREATED_FIRST_EMAIL: "college_email_verification",
+            COLLEGE_ADDED_DELETION_PROGRESS: "college_deletion",
+            COLLEGE_ADDED_RECOVER_PROGRESS: "college_recover",
         };
     }
 
@@ -60,6 +63,28 @@ class MQService {
         logger.info(`[RMQ] Published user_registered for ${userData.email}`);
     }
 
+    async publishCollegeDeletion(collegeData) {
+        const ok = await rabbitMQ.publish(this.queues.COLLEGE_ADDED_DELETION_PROGRESS, collegeData);
+
+        if (!ok) {
+            logger.error(`[RMQ] FAILED → college_deletion for ${collegeData.name}`);
+            return;
+        }
+
+        logger.info(`[RMQ] Published college_deletion for ${collegeData.name}`);
+    }
+
+    async publishCollegeRecover(collegeData) {
+        const ok = await rabbitMQ.publish(this.queues.COLLEGE_ADDED_RECOVER_PROGRESS, collegeData);
+
+        if (!ok) {
+            logger.error(`[RMQ] FAILED → college_recover for ${collegeData.name}`);
+            return;
+        }
+
+        logger.info(`[RMQ] Published college_recover for ${collegeData.name}`);
+    }
+
     /* -------------------- CONSUME EVENTS -------------------- */
 
     async consumeUserRegistered(callback) {
@@ -72,6 +97,43 @@ class MQService {
             }
         });
     }
+
+    /* -------------------- CONSUME COLLEGE EVENTS -------------------- */
+
+    async consumeCollegeDeletion(callback) {
+        await rabbitMQ.consume(
+            this.queues.COLLEGE_ADDED_DELETION_PROGRESS,
+            async (data) => {
+                try {
+                    logger.info(`[RMQ] COLLEGE_DELETION for ${data.collegeId}`);
+                    await callback(data);
+                } catch (err) {
+                    logger.error(
+                        `[RMQ] COLLEGE_DELETION handler failed for ${data.collegeId}: ${err.message}`
+                    );
+                }
+            }
+        );
+    }
+
+    async consumeCollegeRecover(callback) {
+        await rabbitMQ.consume(
+            this.queues.COLLEGE_ADDED_RECOVER_PROGRESS,
+            async (data) => {
+                try {
+                    logger.info(`[RMQ] COLLEGE_RECOVER for ${data.collegeId}`);
+                    await callback(data);
+                } catch (err) {
+                    logger.error(
+                        `[RMQ] COLLEGE_RECOVER handler failed for ${data.collegeId}: ${err.message}`
+                    );
+                }
+            }
+        );
+    }
+
+
+
 }
 
 export default new MQService();

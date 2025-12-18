@@ -40,10 +40,10 @@ export const applyForCollege = async (req, res, next) => {
             phone: data.requestedBy.phone,
             name: data.requestedBy.name,
             collegeName: data.collegeName,
-            verificationLink: `https://school-management-website-production-8b72.up.railway.app/api/college/verify-email?token=${verificationToken}`
+            verificationLink: `${process.env.AUTH_SERVICE_URL}/api/college/verify-email?token=${verificationToken}`
         }
 
-        console.log(`[MOCK EMAIL] Verify at: https://school-management-website-production-8b72.up.railway.app/api/college/verify-email?token=${verificationToken}`);
+        console.log(`[MOCK EMAIL] Verify at: ${process.env.AUTH_SERVICE_URL}/api/college/verify-email?token=${verificationToken}`);
 
         await MQService.publishSendCollegeVerificationEmail(required_data)
 
@@ -298,3 +298,13 @@ export const deleteCollege = async (req, res, next) => {
         next(err);
     }
 };
+
+export const recoverCollege = async (req, res, next) => {
+    try {
+        await CollegeService.recoverCollege(req.query.token);
+        res.json({ success: true });
+
+    } catch (err) {
+        next(err);
+    }
+}

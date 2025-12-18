@@ -36,24 +36,18 @@ const metrics = {
 function getCellText(cell) {
     if (cell === null || cell === undefined) return "";
 
-    // Primitive types (string, number, boolean)
     if (typeof cell !== "object") return String(cell).trim();
 
-    // Rich Text (Array of objects with text property)
     if (cell.richText && Array.isArray(cell.richText)) {
         return cell.richText.map(part => part.text).join("").trim();
     }
 
-    // Hyperlink object ({ text: '...', hyperlink: '...' })
     if (cell.text !== undefined) return String(cell.text).trim();
 
-    // Formula result
     if (cell.result !== undefined) return String(cell.result).trim();
 
-    // Date objects
     if (cell instanceof Date) return cell.toISOString();
 
-    // Fallback
     return "";
 }
 
@@ -309,7 +303,6 @@ const worker = new Worker(
         // Final Save before report
         await uj.save();
 
-        // write report
         const reportDir = process.env.REPORT_DIR || "./reports";
         if (!fs.existsSync(reportDir)) fs.mkdirSync(reportDir, { recursive: true });
 

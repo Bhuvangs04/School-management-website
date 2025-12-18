@@ -8,6 +8,7 @@ const StudentSchema = new mongoose.Schema({
     class: String,
     section: String,
     parents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    status: { type: String, enum: ["ACTIVE", "SUSPENDED"] },
     meta: mongoose.Schema.Types.Mixed,
     createdAt: { type: Date, default: Date.now }
 });

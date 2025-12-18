@@ -10,6 +10,9 @@ import collegeRoutes from "./routes/college.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import fs from "fs";
+import { initCollegeConsumers } from "./consumers/college.consumer.js";
+
+await initCollegeConsumers();
 
 
 dotenv.config();
