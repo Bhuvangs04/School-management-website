@@ -124,6 +124,132 @@ export const getNewDeviceHtml = ({ deviceId, ip, geo, riskScore, approveUrl }) =
   `;
 };
 
+
+export const getCollegeRecoveredHtml = ({
+  collegeName
+}) => {
+  return `
+    <div style="${baseStyles}">
+      <div style="${containerStyle}">
+
+        <!-- HEADER -->
+        <div style="background-color:#16A34A; color:#fff; padding:20px; text-align:center; font-size:24px; font-weight:bold;">
+          College Restored Successfully
+        </div>
+
+        <!-- CONTENT -->
+        <div style="${contentStyle}">
+          <h2 style="margin-top:0;">Good news 🎉</h2>
+
+          <p>
+            The college 
+            <strong style="color:#16A34A;">${collegeName}</strong>
+            has been successfully restored.
+          </p>
+
+          <div style="background:#ECFDF5; border:1px solid #A7F3D0; padding:15px; border-radius:8px; margin:20px 0;">
+            <strong>Status:</strong><br/>
+            All users and services under this college are now active again.
+          </div>
+
+          <p>
+            You can continue using the platform without interruption.
+          </p>
+
+          <div style="text-align:center; margin-top:25px;">
+            <a href="${process.env.CLIENT_URL}/dashboard" style="${buttonStyle}">
+              Go to Dashboard
+            </a>
+          </div>
+
+          <p style="margin-top:25px; font-size:14px; color:#6b7280;">
+            If you have any questions or need assistance, contact support.
+          </p>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="${footerStyle}">
+          &copy; ${new Date().getFullYear()} School App. All rights reserved.
+        </div>
+
+      </div>
+    </div>
+  `;
+};
+
+
+export const getCollegeDeletionHtml = ({
+  collegeName,
+  recoverUntil,
+  recoverToken
+}) => {
+  const recoverLink = `${process.env.CLIENT_URL}/college/recover?token=${recoverToken}`;
+
+  return `
+    <div style="${baseStyles}">
+      <div style="${containerStyle}">
+
+        <!-- HEADER -->
+        <div style="background-color:#DC2626; color:#fff; padding:20px; text-align:center; font-size:24px; font-weight:bold;">
+          College Deletion Scheduled
+        </div>
+
+        <!-- CONTENT -->
+        <div style="${contentStyle}">
+          <h2 style="margin-top:0;">Hello,</h2>
+
+          <p>
+            The college 
+            <strong style="color:#DC2626;">${collegeName}</strong>
+            has been scheduled for deletion.
+          </p>
+
+          <div style="background:#FEF2F2; border:1px solid #FECACA; padding:15px; border-radius:8px; margin:20px 0;">
+            <strong>Important:</strong><br/>
+            All users under this college have been temporarily disabled.
+          </div>
+
+          <p>
+            You can recover this college until:
+          </p>
+
+          <div style="text-align:center; margin:20px 0;">
+            <span style="font-size:18px; font-weight:bold; color:#111827; background:#f3f4f6; padding:10px 16px; border-radius:6px;">
+              ${new Date(recoverUntil).toLocaleString()}
+            </span>
+          </div>
+
+          <p>
+            Click the button below to restore the college before the deadline:
+          </p>
+
+          <div style="text-align:center; margin-top:25px;">
+            <a href="${recoverLink}" style="${buttonStyle}">
+              Recover College
+            </a>
+          </div>
+
+          <p style="margin-top:25px; font-size:14px; color:#6b7280;">
+            If the college is not recovered before this date, all associated data
+            will be permanently deleted and cannot be restored.
+          </p>
+
+          <p style="font-size:14px; color:#6b7280;">
+            If you did not initiate this action, please contact support immediately.
+          </p>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="${footerStyle}">
+          &copy; ${new Date().getFullYear()} School App. All rights reserved.
+        </div>
+
+      </div>
+    </div>
+  `;
+};
+
+
 export const getCollegeVerificationHtml = ({
   name,
   collegeName,

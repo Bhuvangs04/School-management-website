@@ -10,7 +10,9 @@ class MQService {
             COLLEGE_CREATED: 'college_created',
             USER_REGISTERED: 'user_registered',
             ADMIN_ACTION: 'admin_action',
-            COLLEGE_EMAIL_VERIFICATION: 'college_email_verification'
+            COLLEGE_EMAIL_VERIFICATION: 'college_email_verification',
+            COLLEGE_ADDED_DELETION_PROGRESS: "college_deletion",
+            COLLEGE_ADDED_RECOVER_PROGRESS: "college_recover",
         };
     }
 
@@ -21,7 +23,121 @@ class MQService {
         this.consumeUserRegistered();
         this.consumeAdminAction();
         this.consumeCollegeEmailVerification();
+        this.consumeCollegeDeletion();
+        this.consumeCollegeRecover();
     }
+
+    async consumeCollegeDeletion() {
+        await rabbitMQ.consume(
+            this.queues.COLLEGE_ADDED_DELETION_PROGRESS,
+            async (data) => {
+                const { collegeId, recoverUntil, RecoverToken, collegeName, adminEmail } = data;
+
+                try {
+                    logger.info(
+                        `[AUTH] COLLEGE_DELETION → disabling users for college ${collegeId}`
+                    );
+
+                    await User.updateMany(
+                        {
+                            collegeId,
+                            status: { $ne: "DISABLED" }
+                        },
+                        {
+                            $set: {
+                                status: "DISABLED",
+                                disabledReason: "COLLEGE_DELETION",
+                                disabledUntil: recoverUntil
+                            }
+                        }
+                    );
+
+                    await notificationQueue.add(
+                        "OneTimeRecoverToken",
+                        {
+                            adminEmail,
+                            collegeName,
+                            RecoverToken: RecoverToken,
+                            recoverUntil: recoverUntil,
+                            audit: {
+                                userId: collegeId,
+                                event: "COLLEGE_DELETION_EMAIL_SENT",
+                                metadata: { collegeId }
+                            }
+                        },
+                        { attempts: 5 }
+                    );
+
+                    logger.info(`[AUTH] Email job queued for ${email}`);
+
+                    logger.info(
+                        `[AUTH] Users disabled for college ${collegeId}`
+                    );
+                } catch (err) {
+                    logger.error(
+                        `[AUTH] Failed to disable users for college ${collegeId}: ${err.message}`
+                    );
+                    throw err; // allow retry
+                }
+            }
+        );
+    }
+
+    async consumeCollegeRecover() {
+        await rabbitMQ.consume(
+            this.queues.COLLEGE_ADDED_RECOVER_PROGRESS,
+            async (data) => {
+                const { collegeId, collegeName, adminEmail } = data;
+
+                try {
+                    logger.info(
+                        `[AUTH] COLLEGE_RECOVER → enabling users for college ${collegeId}`
+                    );
+
+                    await User.updateMany(
+                        {
+                            collegeId,
+                            status: "DISABLED"
+                        },
+                        {
+                            $set: {
+                                status: "ACTIVE"
+                            },
+                            $unset: {
+                                disabledReason: "",
+                                disabledUntil: ""
+                            }
+                        }
+                    );
+
+                    await notificationQueue.add(
+                        "CollegeRecoverSuccess",
+                        {
+                            adminEmail,
+                            collegeName,
+                            audit: {
+                                userId: collegeId,
+                                event: "COLLEGE_RECOVER_EMAIL_SENT",
+                                metadata: { collegeId }
+                            }
+                        },
+                        { attempts: 5 }
+                    );
+
+                    logger.info(
+                        `[AUTH] Users re-enabled for college ${collegeId}`
+                    );
+                } catch (err) {
+                    logger.error(
+                        `[AUTH] Failed to re-enable users for college ${collegeId}: ${err.message}`
+                    );
+                    throw err;
+                }
+            }
+        );
+    }
+
+
 
     async consumeCollegeCreated() {
         await rabbitMQ.consume(this.queues.COLLEGE_CREATED, async (data) => {

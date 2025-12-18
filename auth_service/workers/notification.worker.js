@@ -6,7 +6,10 @@ const { Worker } = BullMQ;
 import { connection } from "../lib/redis.js";
 import { notificationDLQ, auditQueue } from "../queues/notification.queue.js";
 import Audit from "../models/audit.model.js";
-import { getNewDeviceHtml, getTokenReuseHtml, getOtpHtml, getOneTimeEmail, getCollegeVerificationHtml } from "../utils/Email.template.js"
+import {
+    getNewDeviceHtml, getTokenReuseHtml, getOtpHtml, getOneTimeEmail, getCollegeVerificationHtml, getCollegeDeletionHtml,
+    getCollegeRecoveredHtml
+} from "../utils/Email.template.js"
 import axios from "axios";
 
 console.log("[EMAIL] Brevo initialized");
@@ -42,8 +45,13 @@ const startWorker = async () => {
                             return await OneTimePassword(job.data);
 
                         case "CollegeVerificationEmail":
-                            console.log("[WORKER] Sending college verification email...");
                             return await sendCollegeVerificationEmail(job.data);
+
+                        case "OneTimeRecoverToken":
+                            return await sendCollegeDeletionRecoveryEmail(job.data);
+
+                        case "CollegeRecoverSuccess":
+                            return await sendCollegeRecoveredEmail(job.data);   
 
                         default:
                             throw new Error(`Unknown job type: ${job.name}`);
@@ -163,6 +171,75 @@ async function OneTimePassword({ email, name, role, tempory_password, audit }) {
     return { ok: true };
 
 }
+
+async function sendCollegeDeletionRecoveryEmail({
+    adminEmail,
+    collegeName,
+    RecoverToken,
+    recoverUntil,
+    audit
+}) {
+    console.log("[EMAIL] sendCollegeDeletionRecoveryEmail", {
+        adminEmail,
+        collegeName
+    });
+
+    if (!adminEmail || !RecoverToken || !recoverUntil) {
+        throw new Error("Missing adminEmail / RecoverToken / recoverUntil");
+    }
+
+    const html = getCollegeDeletionHtml({
+        collegeName,
+        adminEmail,
+        recoverUntil,
+        recoverToken: RecoverToken
+    });
+
+    await sendBrevoEmail({
+        to: adminEmail,
+        subject: "College Deletion Scheduled – Recovery Available",
+        html
+    });
+
+    if (audit) {
+        await saveAuditSafe(audit.userId, audit.event, audit.metadata);
+    }
+
+    return { ok: true };
+}
+
+
+async function sendCollegeRecoveredEmail({
+    adminEmail,
+    collegeName,
+    audit
+}) {
+    console.log("[EMAIL] sendCollegeRecoveredEmail", {
+        adminEmail,
+        collegeName
+    });
+
+    if (!adminEmail || !collegeName) {
+        throw new Error("Missing adminEmail or collegeName");
+    }
+
+    const html = getCollegeRecoveredHtml({
+        collegeName
+    });
+
+    await sendBrevoEmail({
+        to: adminEmail,
+        subject: "College Successfully Restored",
+        html
+    });
+
+    if (audit) {
+        await saveAuditSafe(audit.userId, audit.event, audit.metadata);
+    }
+
+    return { ok: true };
+}
+
 
 async function sendCollegeVerificationEmail({
     email,

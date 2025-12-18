@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const COLLEGE_SERVICE_URL = process.env.COLLEGE_SERVICE_URL || "https://school-management-website-production-8b72.up.railway.app/api/college";
+const COLLEGE_SERVICE_URL = process.env.COLLEGE_SERVICE_URL || "https://schoolsuite.site/api/college";
 
 export const validateCollege = async (collegeId) => {
     try {

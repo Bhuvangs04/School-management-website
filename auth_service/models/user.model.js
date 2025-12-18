@@ -22,6 +22,9 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        status: { type: String, enum: ["ACTIVE", "DISABLED ", "DELETED"] },
+        disabledReason: String,
+        disabledUntil: Date,
         role: {
             type: String,
             enum: ["super_admin", "college_admin", "teacher", "student", "parent"],

@@ -10,6 +10,7 @@ router.post("/login", login);
 router.post("/refresh", refreshToken);
 
 
+
 router.use(authenticate)
 router.post("/send-otp", sendOtp);
 router.post("/reset-password", resetPassword);
