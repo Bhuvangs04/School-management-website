@@ -65,3 +65,38 @@ export const assignParent = async (req, res, next) => {
         next(err);
     }
 };
+
+
+export const addDepartment = async (req, res) => {
+    try {
+        const { collegeId } = req.params;
+        const departments = await AdminService.addDepartment(collegeId, req.body);
+        res.status(201).json({ success: true, departments });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+};
+
+export const updateDepartment = async (req, res) => {
+    try {
+        const { collegeId, departmentId } = req.params;
+        const department = await AdminService.updateDepartment(
+            collegeId,
+            departmentId,
+            req.body
+        );
+        res.json({ success: true, department });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+};
+
+export const deleteDepartment = async (req, res) => {
+    try {
+        const { collegeId, departmentId } = req.params;
+        await AdminService.deleteDepartment(collegeId, departmentId);
+        res.json({ success: true, message: "Department deleted" });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+};

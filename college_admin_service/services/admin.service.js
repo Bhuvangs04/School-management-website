@@ -1,5 +1,6 @@
 import UploadJob from "../models/UploadJob.model.js";
 import Student from "../models/Student.model.js";
+import College from "../models/College.model.js"
 import { studentImportQueue } from "../queues/queues.js";
 import { createAudit } from "../utils/audit.js";
 import { uploadToS3 } from "../utils/s3.js";
@@ -56,3 +57,52 @@ export const assignParentToStudent = async (collegeId, studentId, parentId) => {
     }
     return student;
 };
+
+export const addDepartment = async (collegeId, departmentData) => {
+    const college = await College.findById(collegeId);
+    if (!college) throw new Error("College not found");
+
+    const exists = college.departments.some(
+        d => d.name.toLowerCase() === departmentData.name.toLowerCase()
+    );
+    if (exists) throw new Error("Department already exists");
+
+    college.departments.push({
+        name: departmentData.name,
+        hod: departmentData.hod,
+        courses: departmentData.courses || []
+    });
+
+    await college.save();
+    return college.departments;
+};
+
+export const updateDepartment = async (collegeId, departmentId, updateData) => {
+    const college = await College.findById(collegeId);
+    if (!college) throw new Error("College not found");
+
+    const department = college.departments.id(departmentId);
+    if (!department) throw new Error("Department not found");
+
+    if (updateData.name !== undefined) department.name = updateData.name;
+    if (updateData.hod !== undefined) department.hod = updateData.hod;
+    if (updateData.courses !== undefined) department.courses = updateData.courses;
+
+    await college.save();
+    return department;
+};
+
+export const deleteDepartment = async (collegeId, departmentId) => {
+    const college = await College.findById(collegeId);
+    if (!college) throw new Error("College not found");
+
+    const department = college.departments.id(departmentId);
+    if (!department) throw new Error("Department not found");
+
+    department.deleteOne();
+    await college.save();
+
+    return true;
+};
+
+

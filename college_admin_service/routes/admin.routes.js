@@ -14,5 +14,8 @@ router.get("/upload-status/:id", requireRole(["college_admin", "super_admin"]), 
 router.get("/upload-report/:id", requireRole(["college_admin", "super_admin"]), AdminController.downloadReport);
 router.get("/:collegeId/students", requireRole(["college_admin", "super_admin"]), AdminController.listStudents);
 router.post("/:collegeId/students/:id/assign-parent", requireRole(["college_admin", "super_admin"]), AdminController.assignParent);
+router.post("/:collegeId/departments", requireRole(["college_admin", "super_admin"]), AdminController.addDepartment);
+router.put("/:collegeId/departments/:departmentId", requireRole(["college_admin", "super_admin"]), AdminController.updateDepartment);
+router.delete("/:collegeId/departments/:departmentId", requireRole(["college_admin", "super_admin"]), AdminController.deleteDepartment);
 
 export default router;
