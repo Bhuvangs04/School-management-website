@@ -15,7 +15,6 @@ class MQService {
             USER_REGISTERED: "user_registered",
             ADMIN_ACTION: "admin_action",
             COLLEGE_EMAIL_VERIFICATION: "college_email_verification",
-            COLLEGE_CREATED: "college_created",
         };
     }
 
