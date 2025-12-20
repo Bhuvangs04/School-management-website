@@ -9,7 +9,8 @@ const connectDB = async () => {
             socketTimeoutMS: 45000,         // avoid random socket disconnects
             maxIdleTimeMS: 30000,
             family: 4,                      // force IPv4 (fixes DNS delay sometimes)
-            retryWrites: true
+            retryWrites: true,
+            compressors: ['snappy']
         });
         console.log("Auth Service: MongoDB Connected ✔");
     } catch (error) {
