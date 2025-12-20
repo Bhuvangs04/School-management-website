@@ -13,6 +13,7 @@ function getJWTSecret() {
 export const authenticate = async (req, res, next) => {
     try {
         const auth = req.headers.authorization;
+        console.log(auth);
 
         if (!auth || !auth.startsWith("Bearer ")) {
             return res.status(401).json({ success: false, message: "Token missing" });

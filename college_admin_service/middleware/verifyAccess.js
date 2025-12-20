@@ -10,7 +10,7 @@ export default async function verifyAccess(req, res, next) {
         const resp = await axios.post(`${process.env.AUTH_SERVICE_URL}/auth/verify`, { token }, {
             timeout: 5000,
             headers: {
-                Authorization: `Bearer ${token}`
+                Authorization: `${token}`
             }
         });
         console.log(resp)
