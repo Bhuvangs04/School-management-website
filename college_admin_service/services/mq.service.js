@@ -1,139 +1,133 @@
 import rabbitMQ from "../utils/rabbitmq.js";
 import logger from "../utils/logger.js";
 
-
 // Ensure RMQ connection is established ONCE
 await rabbitMQ.connect();
 
 class MQService {
     constructor() {
+        // FANOUT EXCHANGES (shared events)
+        this.exchanges = {
+            COLLEGE_EVENTS: "college.events",
+            USER_EVENTS: "user.events",
+        };
+
+        // SERVICE-SPECIFIC QUEUES
         this.queues = {
-            COLLEGE_CREATED: "college_created",
-            USER_REGISTERED: "user_registered",
+            AUTH_COLLEGE_EVENTS: "auth.college.events",
+            COLLEGE_COLLEGE_EVENTS: "college.college.events",
+            USER_REGISTERED: "user_registered", // point-to-point is fine here
             ADMIN_ACTION: "admin_action",
             COLLEGE_CREATED_FIRST_EMAIL: "college_email_verification",
-            COLLEGE_ADDED_DELETION_PROGRESS: "college_deletion",
-            COLLEGE_ADDED_RECOVER_PROGRESS: "college_recover",
         };
     }
 
     /* -------------------- PUBLISH EVENTS -------------------- */
 
+    // 🔁 FANOUT — both services MUST receive this
     async publishCollegeCreated(collegeData) {
-        const ok = await rabbitMQ.publish(this.queues.COLLEGE_CREATED, collegeData);
+        await rabbitMQ.publishFanout(
+            this.exchanges.COLLEGE_EVENTS,
+            {
+                type: "COLLEGE_CREATED",
+                payload: collegeData
+            }
+        );
 
-        if (!ok) {
-            logger.error(`[RMQ] FAILED → college_created for ${collegeData.name}`);
-            return;
-        }
-
-        logger.info(`[RMQ] Published college_created for ${collegeData.name}`);
+        logger.info(`[RMQ] Fanout → COLLEGE_CREATED for ${collegeData.name}`);
     }
 
-    async publishSendCollegeVerificationEmail(collegeData) {
-        const ok = await rabbitMQ.publish(this.queues.COLLEGE_CREATED_FIRST_EMAIL, collegeData);
-
-        if (!ok) {
-            logger.error(`[RMQ] FAILED → college_created for ${collegeData.name}`);
-            return;
-        }
-
-        logger.info(`[RMQ] Published college_created for ${collegeData.name}`);
-    }
-
-    async publishAdminAction(actionData) {
-        const ok = await rabbitMQ.publish(this.queues.ADMIN_ACTION, actionData);
-
-        if (!ok) {
-            logger.error(`[RMQ] FAILED → admin_action: ${actionData.action}`);
-            return;
-        }
-
-        logger.info(`[RMQ] Published admin_action event: ${actionData.action}`);
-    }
-
-    async publishUserRegistered(userData) {
-        const ok = await rabbitMQ.publish(this.queues.USER_REGISTERED, userData);
-
-        if (!ok) {
-            logger.error(`[RMQ] FAILED → user_registered for ${userData.email}`);
-            return;
-        }
-
-        logger.info(`[RMQ] Published user_registered for ${userData.email}`);
-    }
-
+    // 🔁 FANOUT — deletion affects auth + college services
     async publishCollegeDeletion(collegeData) {
-        const ok = await rabbitMQ.publish(this.queues.COLLEGE_ADDED_DELETION_PROGRESS, collegeData);
+        await rabbitMQ.publishFanout(
+            this.exchanges.COLLEGE_EVENTS,
+            {
+                type: "COLLEGE_DELETION",
+                payload: collegeData
+            }
+        );
 
-        if (!ok) {
-            logger.error(`[RMQ] FAILED → college_deletion for ${collegeData.name}`);
-            return;
-        }
-
-        logger.info(`[RMQ] Published college_deletion for ${collegeData.name}`);
+        logger.info(`[RMQ] Fanout → COLLEGE_DELETION for ${collegeData.name}`);
     }
 
+    // 🔁 FANOUT — recovery affects auth + college services
     async publishCollegeRecover(collegeData) {
-        const ok = await rabbitMQ.publish(this.queues.COLLEGE_ADDED_RECOVER_PROGRESS, collegeData);
+        await rabbitMQ.publishFanout(
+            this.exchanges.COLLEGE_EVENTS,
+            {
+                type: "COLLEGE_RECOVER",
+                payload: collegeData
+            }
+        );
 
-        if (!ok) {
-            logger.error(`[RMQ] FAILED → college_recover for ${collegeData.name}`);
-            return;
-        }
+        logger.info(`[RMQ] Fanout → COLLEGE_RECOVER for ${collegeData.name}`);
+    }
 
-        logger.info(`[RMQ] Published college_recover for ${collegeData.name}`);
+    // ✅ QUEUE — only auth service cares
+    async publishUserRegistered(userData) {
+        await rabbitMQ.publish(this.queues.USER_REGISTERED, userData);
+        logger.info(`[RMQ] Queue → USER_REGISTERED for ${userData.email}`);
+    }
+
+    // ✅ QUEUE — only notification/email service
+    async publishSendCollegeVerificationEmail(collegeData) {
+        await rabbitMQ.publish(
+            this.queues.COLLEGE_CREATED_FIRST_EMAIL,
+            collegeData
+        );
+
+        logger.info(
+            `[RMQ] Queue → COLLEGE_EMAIL_VERIFICATION for ${collegeData.name}`
+        );
+    }
+
+    // ✅ QUEUE — admin actions are single-consumer
+    async publishAdminAction(actionData) {
+        await rabbitMQ.publish(this.queues.ADMIN_ACTION, actionData);
+        logger.info(`[RMQ] Queue → ADMIN_ACTION ${actionData.action}`);
     }
 
     /* -------------------- CONSUME EVENTS -------------------- */
 
+    // ✅ POINT-TO-POINT CONSUME
     async consumeUserRegistered(callback) {
-        await rabbitMQ.consume(this.queues.USER_REGISTERED, async (data) => {
-            try {
-                logger.info(`[RMQ] USER_REGISTERED event for ${data.email}`);
-                await callback(data);  // SAFE async callback
-            } catch (err) {
-                logger.error(`[RMQ] USER_REGISTERED handler failed for ${data.email}: ${err.message}`);
-            }
-        });
-    }
-
-    /* -------------------- CONSUME COLLEGE EVENTS -------------------- */
-
-    async consumeCollegeDeletion(callback) {
         await rabbitMQ.consume(
-            this.queues.COLLEGE_ADDED_DELETION_PROGRESS,
+            this.queues.USER_REGISTERED,
             async (data) => {
-                try {
-                    logger.info(`[RMQ] COLLEGE_DELETION for ${data.collegeId}`);
-                    await callback(data);
-                } catch (err) {
-                    logger.error(
-                        `[RMQ] COLLEGE_DELETION handler failed for ${data.collegeId}: ${err.message}`
-                    );
-                }
+                logger.info(`[RMQ] USER_REGISTERED → ${data.email}`);
+                await callback(data);
             }
         );
     }
 
-    async consumeCollegeRecover(callback) {
-        await rabbitMQ.consume(
-            this.queues.COLLEGE_ADDED_RECOVER_PROGRESS,
-            async (data) => {
-                try {
-                    logger.info(`[RMQ] COLLEGE_RECOVER for ${data.collegeId}`);
-                    await callback(data);
-                } catch (err) {
-                    logger.error(
-                        `[RMQ] COLLEGE_RECOVER handler failed for ${data.collegeId}: ${err.message}`
-                    );
-                }
+    /* -------------------- FANOUT CONSUMERS -------------------- */
+    // 🔁 AUTH SERVICE should call this
+    async consumeCollegeEventsForAuth(callback) {
+        await rabbitMQ.consumeFanout(
+            this.exchanges.COLLEGE_EVENTS,
+            this.queues.AUTH_COLLEGE_EVENTS,
+            async (event) => {
+                logger.info(
+                    `[RMQ][AUTH] ${event.type} → ${event.payload.collegeId}`
+                );
+                await callback(event);
             }
         );
     }
 
-
-
+    // 🔁 COLLEGE SERVICE should call this
+    async consumeCollegeEventsForCollege(callback) {
+        await rabbitMQ.consumeFanout(
+            this.exchanges.COLLEGE_EVENTS,
+            this.queues.COLLEGE_COLLEGE_EVENTS,
+            async (event) => {
+                logger.info(
+                    `[RMQ][COLLEGE] ${event.type} → ${event.payload.collegeId}`
+                );
+                await callback(event);
+            }
+        );
+    }
 }
 
 export default new MQService();

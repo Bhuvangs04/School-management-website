@@ -1,228 +1,180 @@
-import rabbitMQ from '../utils/rabbitmq.js';
-import User from '../models/user.model.js';
-import { notificationQueue } from "../queues/notification.queue.js"; 
+import rabbitMQ from "../utils/rabbitmq.js";
+import User from "../models/user.model.js";
+import { notificationQueue } from "../queues/notification.queue.js";
 import logger from "../utils/logger.js";
-import { makeTempPassword, hashPassword } from "../utils/password.js"
+import { makeTempPassword, hashPassword } from "../utils/password.js";
 
 class MQService {
     constructor() {
+        this.exchanges = {
+            COLLEGE_EVENTS: "college.events",
+        };
+
         this.queues = {
-            COLLEGE_CREATED: 'college_created',
-            USER_REGISTERED: 'user_registered',
-            ADMIN_ACTION: 'admin_action',
-            COLLEGE_EMAIL_VERIFICATION: 'college_email_verification',
-            COLLEGE_ADDED_DELETION_PROGRESS: "college_deletion",
-            COLLEGE_ADDED_RECOVER_PROGRESS: "college_recover",
+            AUTH_COLLEGE_EVENTS: "auth.college.events", // 🔑 UNIQUE to auth-service
+            USER_REGISTERED: "user_registered",
+            ADMIN_ACTION: "admin_action",
+            COLLEGE_EMAIL_VERIFICATION: "college_email_verification",
+            COLLEGE_CREATED: "college_created",
         };
     }
 
     async init() {
         await rabbitMQ.connect();
 
-        this.consumeCollegeCreated();
+        // FANOUT
+        this.consumeCollegeEvents();
+
+        // QUEUE BASED (single consumer is fine)
         this.consumeUserRegistered();
         this.consumeAdminAction();
         this.consumeCollegeEmailVerification();
-        this.consumeCollegeDeletion();
-        this.consumeCollegeRecover();
+        this.consumeCollegeCreated();
     }
 
-    async consumeCollegeDeletion() {
-        await rabbitMQ.consume(
-            this.queues.COLLEGE_ADDED_DELETION_PROGRESS,
-            async (data) => {
-                const { collegeId, recoverUntil, RecoverToken, collegeName, adminEmail } = data;
+    /* ================= FANOUT CONSUMER ================= */
 
-                try {
-                    logger.info(
-                        `[AUTH] COLLEGE_DELETION → disabling users for college ${collegeId}`
-                    );
+    async consumeCollegeEvents() {
+        await rabbitMQ.consumeFanout(
+            this.exchanges.COLLEGE_EVENTS,
+            this.queues.AUTH_COLLEGE_EVENTS,
+            async (event) => {
+                switch (event.type) {
+                    case "COLLEGE_DELETION":
+                        await this.handleCollegeDeletion(event.payload);
+                        break;
 
-                    await User.updateMany(
-                        {
-                            collegeId,
-                            status: { $ne: "DISABLED" }
-                        },
-                        {
-                            $set: {
-                                status: "DISABLED",
-                                disabledReason: "COLLEGE_DELETION",
-                                disabledUntil: recoverUntil
-                            }
-                        }
-                    );
+                    case "COLLEGE_RECOVER":
+                        await this.handleCollegeRecover(event.payload);
+                        break;
 
-                    await notificationQueue.add(
-                        "OneTimeRecoverToken",
-                        {
-                            adminEmail,
-                            collegeName,
-                            RecoverToken: RecoverToken,
-                            recoverUntil: recoverUntil,
-                            audit: {
-                                userId: collegeId,
-                                event: "COLLEGE_DELETION_EMAIL_SENT",
-                                metadata: { collegeId }
-                            }
-                        },
-                        { attempts: 5 }
-                    );
+                    case "COLLEGE_CREATED":
+                        await this.handleCollegeCreated(event.payload);
+                        break;
 
-                    logger.info(`[AUTH] Email job queued for ${email}`);
-
-                    logger.info(
-                        `[AUTH] Users disabled for college ${collegeId}`
-                    );
-                } catch (err) {
-                    logger.error(
-                        `[AUTH] Failed to disable users for college ${collegeId}: ${err.message}`
-                    );
-                    throw err; // allow retry
+                    default:
+                        logger.warn(`[AUTH] Unknown college event: ${event.type}`);
                 }
             }
         );
+
+        logger.info("[AUTH] Listening to college.events (fanout)");
     }
 
-    async consumeCollegeRecover() {
-        await rabbitMQ.consume(
-            this.queues.COLLEGE_ADDED_RECOVER_PROGRESS,
-            async (data) => {
-                const { collegeId, collegeName, adminEmail } = data;
+    async handleCollegeDeletion(data) {
+        const { collegeId, recoverUntil, RecoverToken, collegeName, adminEmail } = data;
 
-                try {
-                    logger.info(
-                        `[AUTH] COLLEGE_RECOVER → enabling users for college ${collegeId}`
-                    );
+        logger.info(`[AUTH] COLLEGE_DELETION → disabling users for ${collegeId}`);
 
-                    await User.updateMany(
-                        {
-                            collegeId,
-                            status: "DISABLED"
-                        },
-                        {
-                            $set: {
-                                status: "ACTIVE"
-                            },
-                            $unset: {
-                                disabledReason: "",
-                                disabledUntil: ""
-                            }
-                        }
-                    );
-
-                    await notificationQueue.add(
-                        "CollegeRecoverSuccess",
-                        {
-                            adminEmail,
-                            collegeName,
-                            audit: {
-                                userId: collegeId,
-                                event: "COLLEGE_RECOVER_EMAIL_SENT",
-                                metadata: { collegeId }
-                            }
-                        },
-                        { attempts: 5 }
-                    );
-
-                    logger.info(
-                        `[AUTH] Users re-enabled for college ${collegeId}`
-                    );
-                } catch (err) {
-                    logger.error(
-                        `[AUTH] Failed to re-enable users for college ${collegeId}: ${err.message}`
-                    );
-                    throw err;
+        await User.updateMany(
+            { collegeId, status: { $ne: "DISABLED" } },
+            {
+                $set: {
+                    status: "DISABLED",
+                    disabledReason: "COLLEGE_DELETION",
+                    disabledUntil: recoverUntil
                 }
             }
         );
+
+        await notificationQueue.add(
+            "OneTimeRecoverToken",
+            {
+                adminEmail,
+                collegeName,
+                RecoverToken,
+                recoverUntil,
+                audit: {
+                    userId: collegeId,
+                    event: "COLLEGE_DELETION_EMAIL_SENT",
+                    metadata: { collegeId }
+                }
+            },
+            { attempts: 5 }
+        );
+
+        logger.info(`[AUTH] Users disabled + email queued for ${collegeId}`);
     }
 
+    async handleCollegeRecover(data) {
+        const { collegeId, collegeName, adminEmail } = data;
 
+        logger.info(`[AUTH] COLLEGE_RECOVER → enabling users for ${collegeId}`);
 
-    async consumeCollegeCreated() {
-        await rabbitMQ.consume(this.queues.COLLEGE_CREATED, async (data) => {
-            logger.info(`[RMQ] COLLEGE_CREATED received → ${data.name}`);
+        await User.updateMany(
+            { collegeId, status: "DISABLED" },
+            {
+                $set: { status: "ACTIVE" },
+                $unset: { disabledReason: "", disabledUntil: "" }
+            }
+        );
 
-            try {
-                const {
-                    collegeId,
-                    name,
-                    code,
-                    adminEmail,
-                    adminPhone
-                } = data;
-
-                let admin = await User.findOne({
-                    email: adminEmail,
-                    role: "college_admin"
-                });
-
-                if (admin) {
-                    logger.info(`[AUTH] College admin already exists → ${adminEmail}`);
-                    return;
+        await notificationQueue.add(
+            "CollegeRecoverSuccess",
+            {
+                adminEmail,
+                collegeName,
+                audit: {
+                    userId: collegeId,
+                    event: "COLLEGE_RECOVER_EMAIL_SENT",
+                    metadata: { collegeId }
                 }
+            },
+            { attempts: 5 }
+        );
 
-                const rawPassword = makeTempPassword();
-                const hashed = await hashPassword(rawPassword);
+        logger.info(`[AUTH] Users re-enabled for ${collegeId}`);
+    }
 
-                admin = await User.create({
-                    name: `${name} Admin`,
-                    email: adminEmail,
-                    phone: adminPhone,
-                    passwordHash: hashed,
-                    role: "college_admin",
-                    collegeId,
-                    code,
-                    passwordChanged: false
-                });
+    async handleCollegeCreated(data) {
+        const { collegeId, name, code, adminEmail, adminPhone } = data;
 
-                logger.info(`[AUTH] FIRST COLLEGE ADMIN created → ${adminEmail}`);
+        let admin = await User.findOne({
+            email: adminEmail,
+            role: "college_admin"
+        });
 
-                await notificationQueue.add(
-                    "OneTimePassword",
-                    {
-                        email: adminEmail,
-                        name,
-                        role: "college_admin",
-                        tempory_password: rawPassword,
-                        audit: {
-                            userId: admin._id,
-                            event: "FIRST_COLLEGE_ADMIN_CREATED",
-                            metadata: { collegeId, code }
-                        }
-                    }
-                );
+        if (admin) return;
 
-                logger.info(`[AUTH] OTP email queued → ${adminEmail}`);
+        const rawPassword = makeTempPassword();
+        const hashed = await hashPassword(rawPassword);
 
-            } catch (err) {
-                logger.error(`[AUTH] Error in COLLEGE_CREATED: ${err.message}`);
+        admin = await User.create({
+            name: `${name} Admin`,
+            email: adminEmail,
+            phone: adminPhone,
+            passwordHash: hashed,
+            role: "college_admin",
+            collegeId,
+            code,
+            passwordChanged: false
+        });
+
+        await notificationQueue.add("OneTimePassword", {
+            email: adminEmail,
+            name,
+            role: "college_admin",
+            tempory_password: rawPassword,
+            audit: {
+                userId: admin._id,
+                event: "FIRST_COLLEGE_ADMIN_CREATED",
+                metadata: { collegeId, code }
             }
         });
+
+        logger.info(`[AUTH] College admin created → ${adminEmail}`);
     }
 
 
-    /**
-     * Main listener for student/parent creation events coming from college-service
-     */
+    /* ================= QUEUE CONSUMERS ================= */
+
     async consumeUserRegistered() {
         await rabbitMQ.consume(this.queues.USER_REGISTERED, async (data) => {
-            logger.info(`[RABBITMQ] USER_REGISTERED event received for ${data.email}`);
-
             try {
-                const {
-                    name,
-                    email,
-                    role,
-                    collegeId,
-                    studentId,
-                    parentOf
-                } = data;
+                const { name, email, role, collegeId, studentId, parentOf } = data;
 
-                // 1. Sync user in auth DB (idempotent)
                 let user = await User.findOne({ email });
                 let rawPassword = null;
-
 
                 if (!user) {
                     rawPassword = makeTempPassword();
@@ -234,83 +186,42 @@ class MQService {
                         passwordHash: hashed,
                         role,
                         collegeId,
-                        studentId: studentId || undefined,
-                        parentOf: parentOf || undefined,
+                        studentId,
+                        parentOf,
                         passwordChanged: false
                     });
-
-                    logger.info(`[AUTH] User created in Auth DB → ${email}`);
-                } else {
-                    logger.info(`[AUTH] User exists → Syncing fields for ${email}`);
-
-                    if (studentId && !user.studentId) user.studentId = studentId;
-                    if (parentOf?.length) {
-                        user.parentOf = [...new Set([...(user.parentOf || []), ...parentOf])];
-                    }
-                    if (!user.collegeId) user.collegeId = collegeId;
-
-                    await user.save();
                 }
 
-                await notificationQueue.add(
-                    "OneTimePassword",
-                    {
-                        email,
-                        name,
-                        role,
-                        tempory_password: rawPassword,
-                        audit: {
-                            userId: user._id,
-                            event: "USER_REGISTERED_OTP_TRIGGERED",
-                            metadata: { role }
-                        }
-                    },
-                    { attempts: 5 }
-                );
-
-                logger.info(`[AUTH] Email job queued for ${email}`);
+                await notificationQueue.add("OneTimePassword", {
+                    email,
+                    name,
+                    role,
+                    tempory_password: rawPassword,
+                    audit: {
+                        userId: user._id,
+                        event: "USER_REGISTERED_OTP_TRIGGERED",
+                        metadata: { role }
+                    }
+                });
 
             } catch (err) {
-                logger.error(`[AUTH] Error handling USER_REGISTERED for ${data.email}: ${err.message}`);
+                logger.error(`[AUTH] USER_REGISTERED error: ${err.message}`);
             }
         });
     }
 
     async consumeAdminAction() {
         await rabbitMQ.consume(this.queues.ADMIN_ACTION, async (data) => {
-            try {
-                logger.info(`[RMQ] ADMIN_ACTION → ${data.action}`);
-            } catch (err) {
-                logger.error(`[AUTH] Error in ADMIN_ACTION: ${err.message}`);
-            }
+            logger.info(`[AUTH] ADMIN_ACTION → ${data.action}`);
         });
     }
 
     async consumeCollegeEmailVerification() {
         await rabbitMQ.consume(this.queues.COLLEGE_EMAIL_VERIFICATION, async (data) => {
-            try {
-                logger.info(`[RMQ] COLLEGE_EMAIL_VERIFICATION → ${data.email}`);
-
-                await notificationQueue.add(
-                    "CollegeVerificationEmail",
-                    {
-                        ...data,
-                        audit: {
-                            event: "COLLEGE_VERIFICATION_EMAIL_SENT",
-                            metadata: { email: data.email }
-                        }
-                    }
-                );
-
-                logger.info(`[AUTH] Verification email queued → ${data.email}`);
-
-            } catch (err) {
-                logger.error(`[AUTH] Error in COLLEGE_EMAIL_VERIFICATION: ${err.message}`);
-            }
+            await notificationQueue.add("CollegeVerificationEmail", data);
+            logger.info(`[AUTH] Verification email queued → ${data.email}`);
         });
     }
 }
-
-
 
 export default new MQService();

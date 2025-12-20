@@ -1,6 +1,7 @@
 import College from "../models/College.model.js";
 import MQService from "../services/mq.service.js";
 import crypto from "crypto";
+import mongoose from "mongoose";
 
 
 

@@ -23,7 +23,7 @@ const router = express.Router();
 router.post("/apply", applyForCollege);
 router.get("/verify-email", verifyCollegeEmail);
 router.get("/:id", validate(getByIdSchema), getCollege);
-router.post("/admin/recover", recoveryRateLimit({ maxAttempts: 5 }), recoverCollege,);
+router.post("/recover", recoveryRateLimit({ maxAttempts: 5 }), recoverCollege);
 
 
 // Protected routes

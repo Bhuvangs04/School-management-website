@@ -61,9 +61,16 @@ export const loginUser = async ({ email, password, ip, userAgent }) => {
     metrics.loginAttempts.inc();
 
     const user = await User.findOne({ email });
+
     if (!user) {
         metrics.loginFailed.inc();
         throw new Error("Invalid credentials");
+    }
+
+    if (user.status === "DISABLED") {
+        metrics.loginFailed.inc();
+        throw new Error("Please contact the college administration");
+
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);

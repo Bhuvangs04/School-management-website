@@ -1,1 +1,3 @@
 After frontend developed [Auth service one-time-password link sending rather sending raw password for new password to students,teacher,parents]
+
+Pending cron job college complete deletion after 30 days

@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true
         },
-        status: { type: String, enum: ["ACTIVE", "DISABLED ", "DELETED"] },
+        status: { type: String, enum: ["ACTIVE", "DISABLED", "DELETED"] },
         disabledReason: String,
         disabledUntil: Date,
         role: {

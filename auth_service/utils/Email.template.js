@@ -183,7 +183,7 @@ export const getCollegeDeletionHtml = ({
   recoverUntil,
   recoverToken
 }) => {
-  const recoverLink = `${process.env.CLIENT_URL}/college/recover?token=${recoverToken}`;
+  const recoverLink = `${process.env.CLIENT_URL}/api/college/recover?token=${recoverToken}`;
 
   return `
     <div style="${baseStyles}">

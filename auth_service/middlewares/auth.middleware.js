@@ -2,19 +2,27 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import { isJtiBlacklisted } from "../utils/redisBlacklist.js";
 
+function getJWTSecret() {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error("JWT_SECRET is missing");
+    }
+    return secret;
+}
+
 export const authenticate = async (req, res, next) => {
     try {
         const auth = req.headers.authorization;
 
         if (!auth || !auth.startsWith("Bearer ")) {
-            return res.status(401).json({ success: false, message: "Unauthorized" });
+            return res.status(401).json({ success: false, message: "Token missing" });
         }
 
         const token = auth.split(" ")[1];
 
         let payload;
         try {
-            payload = jwt.verify(token, process.env.JWT_SECRET);
+            payload = jwt.verify(token, getJWTSecret());
             console.log(payload);
         } catch (e) {
             return res.status(401).json({ success: false, message: "Unauthorized" });

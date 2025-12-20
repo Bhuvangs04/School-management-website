@@ -52,6 +52,84 @@ class RabbitMQ {
         }
     }
 
+    async assertFanout(exchange) {
+        await this.channel.assertExchange(exchange, "fanout", {
+            durable: true
+        });
+    }
+
+    /** FANOUT PUBLISH */
+    async publishFanout(exchange, message) {
+        const ready = await this.ensureChannel();
+        if (!ready) {
+            console.error(`[RMQ] Fanout publish failed → ${exchange}`);
+            return false;
+        }
+
+        try {
+            await this.assertFanout(exchange);
+
+            const ok = this.channel.publish(
+                exchange,
+                "",
+                Buffer.from(JSON.stringify(message)),
+                { persistent: true }
+            );
+
+            if (!ok) {
+                console.error(`[RMQ] Fanout publish returned false → ${exchange}`);
+                return false;
+            }
+
+            console.log(`[RMQ] Fanout message published → ${exchange}`);
+            return true;
+
+        } catch (err) {
+            console.error(`[RMQ] Fanout publish error → ${exchange}:`, err.message);
+            this.channel = null;
+            return false;
+        }
+    }
+
+    /** FANOUT CONSUME */
+    async consumeFanout(exchange, queue, callback) {
+        const ready = await this.ensureChannel();
+        if (!ready) {
+            console.error(`[RMQ] Cannot consume fanout → ${exchange}`);
+            return;
+        }
+
+        try {
+            await this.assertFanout(exchange);
+
+            const q = await this.channel.assertQueue(queue, {
+                durable: true
+            });
+
+            await this.channel.bindQueue(q.queue, exchange, "");
+
+            this.channel.consume(q.queue, async (msg) => {
+                if (!msg) return;
+
+                try {
+                    const content = JSON.parse(msg.content.toString());
+                    await callback(content);
+                    this.channel.ack(msg);
+                } catch (err) {
+                    console.error(`[RMQ] Fanout consume error → ${queue}:`, err);
+                    this.channel.nack(msg, false, true); // retry
+                }
+            });
+
+            console.log(`[RMQ] Fanout consuming → ${exchange} → ${queue}`);
+
+        } catch (err) {
+            console.error(`[RMQ] Fanout consume setup failed:`, err.message);
+        }
+    }
+
+
+
     /** SAFE PUBLISH */
     async publish(queue, message) {
         const ready = await this.ensureChannel();
