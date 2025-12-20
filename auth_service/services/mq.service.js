@@ -29,7 +29,6 @@ class MQService {
         this.consumeUserRegistered();
         this.consumeAdminAction();
         this.consumeCollegeEmailVerification();
-        this.consumeCollegeCreated();
     }
 
     /* ================= FANOUT CONSUMER ================= */
