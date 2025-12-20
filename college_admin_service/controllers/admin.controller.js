@@ -1,4 +1,5 @@
 import * as AdminService from "../services/admin.service.js";
+import * as departmentService from "../services/departmentAccess.service.js"
 
 export const uploadStudents = async (req, res, next) => {
     try {
@@ -100,3 +101,5 @@ export const deleteDepartment = async (req, res) => {
         res.status(400).json({ success: false, message: err.message });
     }
 };
+
+
