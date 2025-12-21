@@ -27,6 +27,3 @@ export const generateAccessToken = (user, jti) => {
 };
 
 
-export const verifyAccessToken = (token) => {
-    return jwt.verify(token, process.env.JWT_SECRET);
-};
