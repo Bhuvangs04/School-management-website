@@ -302,8 +302,8 @@ export const deleteCollege = async (req, res, next) => {
 
 export const recoverCollege = async (req, res, next) => {
     try {
-        await CollegeService.recoverCollege(req.query.token);
-        res.json({ success: true });
+        const result = await CollegeService.recoverCollege(req.query.token);
+        res.json({ success: true, message: result });
 
     } catch (err) {
         next(err);
