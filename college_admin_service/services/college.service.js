@@ -78,7 +78,7 @@ export const recoverCollege = async (token) => {
     college.status = "ACTIVE";
     college.deletedAt = null;
     college.recoverUntil = null;
-    college.RecoverToken = null;
+    college.recoverToken = null;
     college.recoverTokenExpiresAt = null;
 
     await college.save();
