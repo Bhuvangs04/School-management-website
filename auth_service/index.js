@@ -31,13 +31,13 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors());
 app.use(helmet());
-app.set
+
 
 const loginLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 5,
 });
-app.use("/service/login", loginLimiter);
+app.use("/auth/login", loginLimiter);
 app.use("/auth/send-otp", loginLimiter);
 
 app.use("/action", actionRoutes);

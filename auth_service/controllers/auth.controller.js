@@ -117,25 +117,21 @@ export const resetPassword = async (req, res) => {
 export const verifyToken = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
-        console.log(authHeader)
-        if (!authHeader) {
-            return res.status(401).json({ message: "No token" });
-        }
+        if (!authHeader) return res.sendStatus(401);
 
         const { payload, user } =
             await AuthService.verifyAccessTokenAndGetUser(authHeader);
 
-        // 🔐 SEND IDENTITY VIA HEADERS (THIS IS THE KEY)
+        // Headers consumed by NGINX
         res.setHeader("X-User-Id", user._id.toString());
         res.setHeader("X-User-Role", user.role);
         res.setHeader("X-College-Id", user.collegeId?.toString() || "");
         res.setHeader("X-JTI", payload.jti || "");
 
-        // ✅ auth_request ONLY CARES ABOUT STATUS
-        return res.sendStatus(200);
+        // REQUIRED for auth_request
+        return res.sendStatus(204);
 
     } catch (err) {
-        console.log(err)
         return res.sendStatus(401);
     }
 };

@@ -9,7 +9,8 @@
   "scripts": {
     "test": "node test.js",
     "dev": "nodemon server.js",
-    "worker": "node workers/studentImport.worker.js"
+    "worker": "node workers/studentImport.worker.js",
+    "worker_1": "node workers/retry-report.worker.js"
   },
   "repository": {
     "type": "git",
