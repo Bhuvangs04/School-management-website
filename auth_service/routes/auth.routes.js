@@ -8,7 +8,7 @@ import { authenticate } from "../middlewares/auth.middleware.js"
 router.post("/register", register);
 router.post("/login", login);
 router.post("/refresh", refreshToken);
-router.post("/verify", verifyToken);
+router.get("/verify", verifyToken);
 
 
 

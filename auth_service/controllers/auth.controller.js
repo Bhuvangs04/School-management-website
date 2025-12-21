@@ -117,7 +117,7 @@ export const verifyToken = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader) {
-            return res.sendStatus(401);
+            return res.status(401).json({ message: "No token" });
         }
 
         const { payload, user } =
