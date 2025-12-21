@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import fs from "fs";
+import path from "path"
 
 const PRIVATE_KEY = fs.readFileSync(
     path.join(process.cwd(), "jwt_private.pem"),
