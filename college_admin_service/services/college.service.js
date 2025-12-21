@@ -68,7 +68,7 @@ export const deleteCollege = async (id) => {
 
 export const recoverCollege = async (token) => {
     const college = await College.findOne({
-        RecoverToken: token,
+        recoverToken: token,
         recoverTokenExpiresAt: { $gt: new Date() },
         status: "DELETING"
     });
