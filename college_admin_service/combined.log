@@ -12,3 +12,11 @@
 {"level":"info","message":"College Service listening on 5002","timestamp":"2025-11-24T05:56:23.809Z"}
 {"level":"info","message":"MongoDB connected","timestamp":"2025-11-24T05:58:41.676Z"}
 {"level":"info","message":"College Service listening on 5002","timestamp":"2025-11-24T05:58:42.145Z"}
+{"level":"info","message":"[STUDENT] College fanout consumer initialized","timestamp":"2025-12-21T12:29:35.912Z"}
+{"level":"info","message":"MongoDB connected","timestamp":"2025-12-21T12:29:37.190Z"}
+{"level":"info","message":"College Service listening on 5002","timestamp":"2025-12-21T12:29:37.233Z"}
+{"level":"info","message":"Shutting down server...","timestamp":"2025-12-21T12:30:25.958Z"}
+{"level":"info","message":"[STUDENT] College fanout consumer initialized","timestamp":"2025-12-21T12:30:37.557Z"}
+{"level":"info","message":"MongoDB connected","timestamp":"2025-12-21T12:30:39.056Z"}
+{"level":"info","message":"College Service listening on 5002","timestamp":"2025-12-21T12:30:39.071Z"}
+{"level":"info","message":"Shutting down server...","timestamp":"2025-12-21T12:44:35.197Z"}
