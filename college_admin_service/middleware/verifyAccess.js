@@ -6,6 +6,8 @@ export default function verifyAccess(req, res, next) {
             message: "Unauthorized"
         });
     }
+    console.log("verifyAccess hit", req.headers["x-user-id"]);
+
 
     const userId = req.headers["x-user-id"];
     const role = req.headers["x-user-role"];
