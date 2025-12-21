@@ -17,48 +17,188 @@ info:
 
 
 ---------------------------------------Ngix config----------------------------------------------------
+# ======================
+# GLOBAL
+# ======================
+env REDIS_URL;
 
-server {
-    listen 443 ssl http2;
-    server_name schoolsuite.site www.schoolsuite.site;
+worker_processes auto;
 
-    ssl_certificate /etc/letsencrypt/live/schoolsuite.site/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/schoolsuite.site/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-    # ======================
-    # AUTH SERVICE → port 4000
-    # ======================
-    location /action/ {
-        proxy_pass http://127.0.0.1:4000/;
-        proxy_http_version 1.1;
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-
-   location /auth/ {
-    proxy_pass http://127.0.0.1:4000/;
-    proxy_http_version 1.1;
-
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto https;
+events {
+    worker_connections 1024;
 }
 
-    # ======================
-    # COLLEGE ADMIN SERVICE → port 5002
-    # ======================
-    location /api/ {
-        proxy_pass http://127.0.0.1:5002/;
-        proxy_http_version 1.1;
+http {
+    lua_package_path "/usr/local/openresty/site/lualib/?.lua;/usr/local/openresty/lualib/?.lua;;";
 
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
+    server {
+        listen 443 ssl;
+        http2 on;
+        server_name schoolsuite.site www.schoolsuite.site;
+
+        ssl_certificate /etc/letsencrypt/live/schoolsuite.site/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/schoolsuite.site/privkey.pem;
+        include /etc/letsencrypt/options-ssl-nginx.conf;
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+        # ======================
+        # JWT SKIP FLAG (DEFAULT)
+        # ======================
+        set $skip_jwt 0;
+
+        # ---------- AUTH (PUBLIC) ----------
+        if ($request_uri ~ ^/auth/(login|register|refresh)$) {
+            set $skip_jwt 1;
+        }
+
+        # ---------- ACTION (PUBLIC) ----------
+        if ($request_uri ~ ^/action/capture$) {
+            set $skip_jwt 1;
+        }
+
+        # ---------- COLLEGE (PUBLIC) ----------
+        if ($request_uri ~ ^/api/college/apply$) {
+            set $skip_jwt 1;
+        }
+
+        if ($request_uri ~ ^/api/college/verify-email$) {
+            set $skip_jwt 1;
+        }
+
+        # /api/college/:id
+        if ($request_uri ~ ^/api/college/[^/]+$) {
+            set $skip_jwt 1;
+        }
+
+        if ($request_uri ~ ^/api/college/recover$) {
+            set $skip_jwt 1;
+        }
+
+        # ---------- HEALTH ----------
+        if ($request_uri ~ ^/(api/)?health$) {
+            set $skip_jwt 1;
+        }
+
+        # ======================
+        # JWT + REDIS VERIFICATION
+        # ======================
+        access_by_lua_block {
+
+            if ngx.var.skip_jwt == "1" then
+                return
+            end
+
+            local jwt = require "resty.jwt"
+            local validators = require "resty.jwt-validators"
+            local redis = require "resty.redis"
+
+            local auth = ngx.var.http_authorization
+            if not auth then
+                return ngx.exit(401)
+            end
+
+            local token = auth:match("Bearer%s+(.+)")
+            if not token then
+                return ngx.exit(401)
+            end
+
+            -- Load public key
+            local f = io.open("/etc/nginx/jwt_public.pem", "r")
+            if not f then
+                return ngx.exit(500)
+            end
+            local pubkey = f:read("*a")
+            f:close()
+
+            -- Verify JWT
+            local jwt_obj = jwt:verify(pubkey, token, {
+                validators = {
+                    exp = validators.is_not_expired(),
+                    iss = validators.equals("auth-service"),
+                    aud = validators.equals("api-gateway")
+                }
+            })
+
+            if not jwt_obj.verified then
+                return ngx.exit(401)
+            end
+
+            -- Redis blacklist
+            local redis_url = os.getenv("REDIS_URL")
+            if not redis_url then
+                return ngx.exit(500)
+            end
+
+            local m = ngx.re.match(
+                redis_url,
+                [[^rediss://([^:]+):([^@]+)@([^:]+):(\d+)$]],
+                "jo"
+            )
+            if not m then
+                return ngx.exit(500)
+            end
+
+            local red = redis:new()
+            red:set_timeout(1000)
+
+            local ok, err = red:connect(m[3], tonumber(m[4]))
+            if not ok then
+                ngx.log(ngx.ERR, "Redis connect failed: ", err)
+                return ngx.exit(500)
+            end
+
+            ok, err = red:ssl_handshake(nil, m[3], false)
+            if not ok then
+                ngx.log(ngx.ERR, "Redis TLS failed: ", err)
+                return ngx.exit(500)
+            end
+
+            ok, err = red:auth(m[1], m[2])
+            if not ok then
+                ngx.log(ngx.ERR, "Redis auth failed: ", err)
+                return ngx.exit(500)
+            end
+
+            if jwt_obj.payload.jti then
+                if red:get("blacklist:jti:" .. jwt_obj.payload.jti) == "1" then
+                    return ngx.exit(401)
+                end
+            end
+
+            red:set_keepalive(10000, 100)
+
+            -- Trusted headers
+            ngx.req.set_header("X-Trusted-Request", "true")
+            ngx.req.set_header("X-User-Id", jwt_obj.payload.sub)
+            ngx.req.set_header("X-User-Role", jwt_obj.payload.role)
+            ngx.req.set_header("X-College-Id", jwt_obj.payload.collegeId or "")
+        }
+
+        # ======================
+        # AUTH SERVICE → 4000
+        # ======================
+        location /auth/ {
+            proxy_pass http://127.0.0.1:4000/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location /action/ {
+            proxy_pass http://127.0.0.1:4000/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+
+        # ======================
+        # COLLEGE SERVICE → 5002
+        # ======================
+        location /api/ {
+            proxy_pass http://127.0.0.1:5002/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto https;
+        }
     }
 }

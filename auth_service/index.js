@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth.routes.js";
 import io from "@pm2/io";
 import { metrics } from "./metrics/pm2.metrics.js";
 import MQService from "./services/mq.service.js";
+import unProtectedRoutes from "./routes/unprotected.routes.js"
 
 io.metric({
     name: "Auth Service Status",
@@ -36,12 +37,11 @@ const loginLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 5,
 });
-app.use("/auth/login", loginLimiter);
+app.use("/service/login", loginLimiter);
 app.use("/auth/send-otp", loginLimiter);
 
+app.use("/service", unProtectedRoutes)
 app.use("/action", actionRoutes);
-
-
 app.use("/auth", authRoutes);
 
 
