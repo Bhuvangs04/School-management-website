@@ -21,6 +21,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
     try {
+        console.log(req.body)
         const {email, password} = req.body;
         const ip = normalizeIP(req.ip);
         const userAgent = req.headers["user-agent"];
