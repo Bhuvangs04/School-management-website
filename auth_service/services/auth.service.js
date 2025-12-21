@@ -407,26 +407,6 @@ export const resetPassword = async (email, otp, newPassword) => {
 
 
 
-export const verifyAccessTokenAndGetUser = async (token) => {
-    if (!token) throw new Error("No token provided");
-    if (token.startsWith("Bearer ")) token = token.split(" ")[1];
-
-    console.log("Data:", token)
-
-    let payload;
-    try {
-        console.log(process.env.JWT_SECRET)
-        payload = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("PlayLoad", payload)
-    } catch (err) {
-        throw new Error("Invalid or expired token");
-    }
-
-    const user = await User.findById(payload.userId).select("-passwordHash -resetOtp -resetOtpExp -refreshToken");
-    if (!user) throw new Error("User not found");
-
-    return { payload, user };
-}
 
 
 export const changePassword = async ({ userId, oldPassword, newPassword }) => {
