@@ -59,7 +59,6 @@ export const deleteCollege = async (id) => {
         RecoverToken
     });
 
-
     return {
         message: "College scheduled for deletion",
     };

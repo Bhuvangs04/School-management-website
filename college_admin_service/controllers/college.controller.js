@@ -292,12 +292,13 @@ export const updateCollege = async (req, res, next) => {
 
 export const deleteCollege = async (req, res, next) => {
     try {
-        await CollegeService.deleteCollege(req.params.id);
-        res.json({ success: true });
+        const result = await CollegeService.deleteCollege(req.params.id);
+        res.json({ success: true, message: result });
     } catch (err) {
         next(err);
     }
 };
+
 
 export const recoverCollege = async (req, res, next) => {
     try {
