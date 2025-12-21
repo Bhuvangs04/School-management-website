@@ -39,10 +39,10 @@ const loginLimiter = rateLimit({
 app.use("/auth/login", loginLimiter);
 app.use("/auth/send-otp", loginLimiter);
 
-app.use("/", actionRoutes);
+app.use("/action", actionRoutes);
 
 
-app.use("/", authRoutes);
+app.use("/auth", authRoutes);
 
 
 app.listen(process.env.PORT, async () => {
