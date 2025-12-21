@@ -117,6 +117,7 @@ export const resetPassword = async (req, res) => {
 export const verifyToken = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
+        console.log(authHeader)
         if (!authHeader) {
             return res.status(401).json({ message: "No token" });
         }
@@ -134,6 +135,7 @@ export const verifyToken = async (req, res) => {
         return res.sendStatus(200);
 
     } catch (err) {
+        console.log(err)
         return res.sendStatus(401);
     }
 };

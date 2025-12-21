@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { blacklistJTI } from "../utils/redisBlacklist.js";
+import { blacklistJTI, isJtiBlacklisted } from "../utils/redisBlacklist.js";
 import RefreshSession from "../models/refreshSession.model.js";
 import { generateAccessToken } from "../utils/jwt.js";
 import { hashToken, createRefreshToken, generateJTI } from "../utils/crypto.js";
@@ -419,6 +419,7 @@ export const verifyAccessTokenAndGetUser = async (authHeader) => {
     }
 
     const token = authHeader.split(" ")[1];
+    console.log(token)
 
     let payload;
     try {
@@ -431,15 +432,15 @@ export const verifyAccessTokenAndGetUser = async (authHeader) => {
         throw new Error("Invalid or expired token");
     }
 
-    // 🔒 JTI blacklist check (logout / revoke)
+    console.log(payload)
+
     if (payload.jti) {
-        const blocked = await redis.get(`blacklist:jti:${payload.jti}`);
+        const blocked = await isJtiBlacklisted(`blacklist:jti:${payload.jti}`);
         if (blocked) {
             throw new Error("Token revoked");
         }
     }
 
-    // 🔍 Load user
     const user = await User.findById(payload.sub)
         .select("-passwordHash -resetOtp -resetOtpExp -refreshToken");
 

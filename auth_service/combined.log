@@ -500,3 +500,10 @@
 {"level":"info","message":"[AUTH] Verification email queued → bhuvangs.btech23@rvu.edu.in","timestamp":"2025-11-24T07:01:38.668Z"}
 {"level":"info","message":"[RMQ] COLLEGE_CREATED received → RV University","timestamp":"2025-11-24T07:02:05.290Z"}
 {"level":"error","message":"[AUTH] Error in COLLEGE_CREATED: E11000 duplicate key error collection: test.users index: email_1 dup key: { email: \"bhuvangs.btech23@rvu.edu.in\" }","timestamp":"2025-11-24T07:02:05.598Z"}
+{"level":"info","message":"[AUTH] Listening to college.events (fanout)","timestamp":"2025-12-21T12:36:14.508Z"}
+{"level":"info","message":"[AUTH] Listening to college.events (fanout)","timestamp":"2025-12-21T12:38:21.175Z"}
+{"level":"info","message":"[AUTH] Listening to college.events (fanout)","timestamp":"2025-12-21T12:38:57.453Z"}
+{"level":"info","message":"[AUTH] Listening to college.events (fanout)","timestamp":"2025-12-21T12:39:40.101Z"}
+{"level":"info","message":"[AUTH] Listening to college.events (fanout)","timestamp":"2025-12-21T12:40:27.493Z"}
+{"level":"info","message":"[AUTH] Listening to college.events (fanout)","timestamp":"2025-12-21T12:42:08.860Z"}
+{"level":"info","message":"[AUTH] Listening to college.events (fanout)","timestamp":"2025-12-21T12:42:22.892Z"}
