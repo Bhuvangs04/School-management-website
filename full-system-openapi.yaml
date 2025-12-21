@@ -15,353 +15,50 @@ info:
       - Event Bus Integration (Async events section)
     Includes API Key structure, JWT usage, full request/response bodies, and workflows.
 
-servers:
-  - url: coming soon.
-    description: API Gateway Entry
 
-security:
-  - ApiKeyAuth: []
-  - BearerAuth: []
+---------------------------------------Ngix config----------------------------------------------------
 
-components:
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: x-api-key
-      description: API key generated per service or admin
+server {
+    listen 443 ssl http2;
+    server_name schoolsuite.site www.schoolsuite.site;
 
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    ssl_certificate /etc/letsencrypt/live/schoolsuite.site/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/schoolsuite.site/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    # ======================
+    # AUTH SERVICE → port 4000
+    # ======================
+    location /action/ {
+        proxy_pass http://127.0.0.1:4000/;
+        proxy_http_version 1.1;
 
-  responses:
-    Unauthorized:
-      description: Invalid or missing credentials
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
 
-    Forbidden:
-      description: User does not have access
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
+   location /auth/ {
+    proxy_pass http://127.0.0.1:4000/;
+    proxy_http_version 1.1;
 
-  schemas:
-    ErrorResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: false }
-        message: { type: string }
-        code: { type: string }
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+}
 
-    SuccessResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        data: { type: object }
+    # ======================
+    # COLLEGE ADMIN SERVICE → port 5002
+    # ======================
+    location /api/ {
+        proxy_pass http://127.0.0.1:5002/;
+        proxy_http_version 1.1;
 
-    ApiKeyObject:
-      type: object
-      properties:
-        apiKey:
-          type: string
-          example: "sk_live_3hHk23KDs8as8dsd=="
-        service:
-          type: string
-          example: "issue-service"
-        createdAt:
-          type: string
-        expiresAt:
-          type: string
-
-######################################################################
-#                        AUTH SERVICE
-######################################################################
-
-paths:
-  /auth/register:
-    post:
-      summary: Register admin user
-      security:
-        - ApiKeyAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email: { type: string, format: email }
-                password: { type: string }
-                role: { type: string, enum: [super_admin, college_admin] }
-              required: [email, password, role]
-      responses:
-        "201":
-          description: Admin registered
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessResponse"
-
-  /auth/login:
-    post:
-      summary: Login & return access + refresh tokens
-      security: []  # No auth required
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email: { type: string }
-                password: { type: string }
-      responses:
-        "200":
-          description: Login OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  accessToken: { type: string }
-                  refreshToken: { type: string }
-
-  /auth/refresh:
-    post:
-      summary: Refresh access token
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                refreshToken: { type: string }
-      responses:
-        "200":
-          description: New Access Token
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  accessToken: { type: string }
-
-######################################################################
-#                        USER SERVICE
-######################################################################
-
-  /users:
-    post:
-      summary: Create user (student, teacher, parent)
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                email: { type: string }
-                role: { type: string, enum: [teacher, student, parent] }
-                collegeId: { type: string }
-      responses:
-        "201":
-          description: User created
-
-    get:
-      summary: List all users
-      security:
-        - BearerAuth: []
-
-  /users/{id}:
-    get:
-      summary: Get user details
-      security:
-        - BearerAuth: []
-    put:
-      summary: Update user
-      security:
-        - BearerAuth: []
-    delete:
-      summary: Delete user
-      security:
-        - BearerAuth: []
-
-######################################################################
-#                        COLLEGE SERVICE
-######################################################################
-
-  /colleges:
-    post:
-      summary: Create new college
-      security:
-        - BearerAuth: []
-    get:
-      summary: List all colleges
-      security:
-        - BearerAuth: []
-
-  /colleges/{id}:
-    get:
-      summary: Get college details
-      security:
-        - BearerAuth: []
-    put:
-      summary: Update college
-      security:
-        - BearerAuth: []
-
-######################################################################
-#                        ISSUE SERVICE (CORE)
-######################################################################
-
-  /issues:
-    post:
-      summary: Raise issue
-      security: 
-        - BearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title: { type: string }
-                description: { type: string }
-                category: { type: string }
-                attachments: 
-                  type: array
-                  items: { type: string }
-      responses:
-        "201":
-          description: Issue created
-
-    get:
-      summary: List all issues
-      security:
-        - BearerAuth: []
-
-  /issues/pending-approval:
-    get:
-      summary: Issues waiting for college admin
-      security:
-        - BearerAuth: []
-
-  /issues/{id}/approve:
-    put:
-      summary: College admin approves issue
-      security:
-        - BearerAuth: []
-
-  /issues/{id}/reject:
-    put:
-      summary: Reject issue
-      security:
-        - BearerAuth: []
-
-  /issues/{id}/resolve:
-    put:
-      summary: Super admin resolves issue
-      security:
-        - BearerAuth: []
-
-  /issues/{id}/comments:
-    post:
-      summary: Add issue comment
-      security:
-        - BearerAuth: []
-
-######################################################################
-#                        ATTENDANCE SERVICE
-######################################################################
-
-  /attendance/mark:
-    post:
-      summary: Mark attendance
-      security:
-        - BearerAuth: []
-
-  /attendance/class/{classId}:
-    get:
-      summary: Get attendance for class
-      security:
-        - BearerAuth: []
-
-######################################################################
-#                        HOMEWORK SERVICE
-######################################################################
-
-  /homework:
-    post:
-      summary: Teacher creates homework
-      security:
-        - BearerAuth: []
-
-  /homework/submit:
-    post:
-      summary: Student submits homework
-      security:
-        - BearerAuth: []
-
-######################################################################
-#                        NOTIFICATION SERVICE
-######################################################################
-
-  /notify/send:
-    post:
-      summary: Send notification
-      security:
-        - ApiKeyAuth: []
-
-  /notify/user/{id}:
-    get:
-      summary: User notifications
-      security:
-        - ApiKeyAuth: []
-
-######################################################################
-#                        FILE STORAGE SERVICE
-######################################################################
-
-  /files/upload-url:
-    get:
-      summary: Generate secure upload URL
-      security:
-        - ApiKeyAuth: []
-
-######################################################################
-#                        EVENT BUS (ASYNC EVENTS)
-######################################################################
-
-x-eventBus:
-  description: All events sent to RabbitMQ / Kafka
-  events:
-    ISSUE_RAISED:
-      payload:
-        issueId: string
-        createdBy: string
-    ISSUE_APPROVED:
-      payload:
-        issueId: string
-        adminId: string
-    HOMEWORK_SUBMITTED:
-      payload:
-        homeworkId: string
-        studentId: string
-    ATTENDANCE_MARKED:
-      payload:
-        classId: string
-        markedBy: string
-    USER_CREATED:
-      payload:
-        userId: string
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

@@ -1,15 +1,25 @@
 import jwt from "jsonwebtoken";
+const PRIVATE_KEY = fs.readFileSync(
+    path.join(process.cwd(), "jwt_private.pem"),
+    "utf8"
+);
 
 export const generateAccessToken = (user, jti) => {
     return jwt.sign(
         {
-            userId: user._id,
+            sub: user._id.toString(),
             role: user.role,
-            collegeId: user.collegeId || null,
-            jti              
+            email: user.email,
+            collegeId: user.collegeId ?? null,
+            jti
         },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.ACCESS_TOKEN_EXPIRES || "15m" }
+        PRIVATE_KEY,
+        {
+            algorithm: "RS256",
+            expiresIn: "15m",
+            issuer: "auth-service",
+            audience: "api-gateway"
+        }
     );
 };
 

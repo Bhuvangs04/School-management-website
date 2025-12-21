@@ -1,56 +1,27 @@
-import jwt from "jsonwebtoken";
-import User from "../models/user.model.js";
-import { isJtiBlacklisted } from "../utils/redisBlacklist.js";
 
-function getJWTSecret() {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-        throw new Error("JWT_SECRET is missing");
+export const authenticate = (req, res, next) => {
+    const trusted = req.headers["x-trusted-request"];
+
+    if (trusted !== "true") {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized"
+        });
     }
-    return secret;
-}
 
-export const authenticate = async (req, res, next) => {
-    try {
-        const auth = req.headers.authorization;
-        console.log(auth);
-
-        if (!auth || !auth.startsWith("Bearer ")) {
-            return res.status(401).json({ success: false, message: "Token missing" });
-        }
-
-        const token = auth.split(" ")[1];
-
-        let payload;
-        try {
-            payload = jwt.verify(token, getJWTSecret());
-            console.log(payload);
-        } catch (e) {
-            return res.status(401).json({ success: false, message: "Unauthorized" });
-        }
-
-        if (payload?.jti) {
-            const blocked = await isJtiBlacklisted(payload.jti);
-            if (blocked) {
-                return res.status(401).json({ success: false, message: "Unauthorized" });
-            }
-        }
-
-        const user = await User.findById(payload.userId)
-            .select("-passwordHash -resetOtp -resetOtpExp -refreshToken");
-
-        if (!user) {
-            return res.status(401).json({ success: false, message: "Unauthorized" });
-        }
-
-        req.user = {
-            id: user._id.toString(),
-            role: user.role,
-            collegeId: user.collegeId
-        };
-
-        next();
-    } catch (err) {
-        return res.status(401).json({ success: false, message: "Unauthorized" });
+    const userId = req.headers["x-user-id"];
+    if (!userId) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized"
+        });
     }
+
+    req.user = {
+        id: userId,
+        role: req.headers["x-user-role"],
+        collegeId: req.headers["x-college-id"]
+    };
+
+    next();
 };

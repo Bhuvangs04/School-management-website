@@ -7,14 +7,13 @@ const DepartmentMemberSchema = new mongoose.Schema({
 
     role: {
         type: String,
-        enum: ["HOD", "FACULTY_ADMIN", "STAFF"],
+        enum: ["HOD", "FACULTY", "ASSISTANT"],
         required: true
     },
 
-    permissions: [{ type: String }], // resolved at assignment time
+    permissions: { type: Object, required: true },
 
-    isActive: { type: Boolean, default: true },
-    assignedAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now }
 });
 
 DepartmentMemberSchema.index({ userId: 1, departmentId: 1 }, { unique: true });
