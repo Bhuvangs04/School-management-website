@@ -10,7 +10,7 @@ export const uploadStudents = async (req, res, next) => {
             throw error;
         }
 
-        const job = await AdminService.createUploadJob(req.params.collegeId, req.user._id, file);
+        const job = await AdminService.createUploadJob(req.params.collegeId, req.user.id, file);
         res.status(202).json({ success: true, jobId: job._id });
     } catch (err) {
         next(err);
