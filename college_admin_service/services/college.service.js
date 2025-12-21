@@ -46,7 +46,7 @@ export const deleteCollege = async (id) => {
     college.status = "DELETING";
     college.recoverUntil = recoverUntil;
     college.deletedAt = now;
-    college.RecoverToken = RecoverToken;
+    college.recoverToken = RecoverToken;
     college.recoverTokenExpiresAt = recoverUntil;
 
     await college.save();
