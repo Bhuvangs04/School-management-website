@@ -15,6 +15,12 @@ import Audit from "../models/audit.model.js";
 import { generateActionToken} from "../utils/actionToken.js";
 import ActionToken from "../models/ActionToken.model.js";
 import { validateCollege } from "./college.service.js";
+import fs from "fs";
+
+
+const PUBLIC_KEY = fs.readFileSync("./jwt_public.pem", "utf8");
+
+
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -407,6 +413,45 @@ export const resetPassword = async (email, otp, newPassword) => {
 
 
 
+export const verifyAccessTokenAndGetUser = async (authHeader) => {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        throw new Error("Token missing");
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    let payload;
+    try {
+        payload = jwt.verify(token, PUBLIC_KEY, {
+            algorithms: ["RS256"],
+            issuer: "auth-service",
+            audience: "api-gateway"
+        });
+    } catch {
+        throw new Error("Invalid or expired token");
+    }
+
+    // 🔒 JTI blacklist check (logout / revoke)
+    if (payload.jti) {
+        const blocked = await redis.get(`blacklist:jti:${payload.jti}`);
+        if (blocked) {
+            throw new Error("Token revoked");
+        }
+    }
+
+    // 🔍 Load user
+    const user = await User.findById(payload.sub)
+        .select("-passwordHash -resetOtp -resetOtpExp -refreshToken");
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    return {
+        payload,
+        user
+    };
+};
 
 
 export const changePassword = async ({ userId, oldPassword, newPassword }) => {

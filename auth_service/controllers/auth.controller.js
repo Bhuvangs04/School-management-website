@@ -113,6 +113,29 @@ export const resetPassword = async (req, res) => {
 };
 
 
+export const verifyToken = async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.sendStatus(401);
+        }
+
+        const { payload, user } =
+            await AuthService.verifyAccessTokenAndGetUser(authHeader);
+
+        // 🔐 SEND IDENTITY VIA HEADERS (THIS IS THE KEY)
+        res.setHeader("X-User-Id", user._id.toString());
+        res.setHeader("X-User-Role", user.role);
+        res.setHeader("X-College-Id", user.collegeId?.toString() || "");
+        res.setHeader("X-JTI", payload.jti || "");
+
+        // ✅ auth_request ONLY CARES ABOUT STATUS
+        return res.sendStatus(200);
+
+    } catch (err) {
+        return res.sendStatus(401);
+    }
+};
 
 
 
