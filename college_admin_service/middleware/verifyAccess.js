@@ -1,7 +1,6 @@
-export default async function verifyAccess(req, res, next) {
-    const trusted = req.headers["x-trusted-request"];
-
-    if (trusted !== "true") {
+export default function verifyAccess(req, res, next) {
+    // 🔒 Must come from gateway
+    if (req.headers["x-trusted-request"] !== "true") {
         return res.status(401).json({
             success: false,
             message: "Unauthorized"
@@ -9,17 +8,20 @@ export default async function verifyAccess(req, res, next) {
     }
 
     const userId = req.headers["x-user-id"];
-    if (!userId) {
+    const role = req.headers["x-user-role"];
+    const collegeId = req.headers["x-college-id"];
+
+    if (!userId || !role) {
         return res.status(401).json({
             success: false,
-            message: "Unauthorized"
+            message: "Invalid auth headers"
         });
     }
 
     req.user = {
         id: userId,
-        role: req.headers["x-user-role"],
-        collegeId: req.headers["x-college-id"]
+        role,
+        collegeId
     };
 
     next();

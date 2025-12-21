@@ -26,7 +26,7 @@ export const requireCollegeAccess = (req, res, next) => {
         return res.status(400).json({ success: false, message: "College ID missing in route" });
     }
 
-    if (req.user.collegeId.toString() !== collegeId.toString()) {
+    if (String(req.user.collegeId) !== String(collegeId)) { 
         return res.status(403).json({ success: false, message: "Forbidden: College access denied" });
     }
 
