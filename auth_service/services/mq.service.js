@@ -8,6 +8,7 @@ class MQService {
     constructor() {
         this.exchanges = {
             COLLEGE_EVENTS: "college.events",
+            USER_EVENTS: "user.events"
         };
 
         this.queues = {

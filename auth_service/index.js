@@ -13,6 +13,7 @@ import { metrics } from "./metrics/pm2.metrics.js";
 import MQService from "./services/mq.service.js";
 import { verifyToken } from "./controllers/auth.controller.js";
 
+
 io.metric({
     name: "Auth Service Status",
     value: () => "online"
