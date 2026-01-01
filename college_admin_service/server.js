@@ -15,7 +15,6 @@ import MQService from "./services/mq.service.js";
 import fs from "fs";
 import { initCollegeConsumers } from "./consumers/college.consumer.js";
 
-await initCollegeConsumers();
 
 
 dotenv.config();
@@ -39,8 +38,11 @@ if (process.env.NODE_ENV !== "production") {
 await connectDB();
 
 // RabbitMQ Connection
-await rabbitMQ.connect();
 await MQService.init();
+
+
+// start consumers AFTER MQ is ready
+await initCollegeConsumers();
 
 
 // Routes
