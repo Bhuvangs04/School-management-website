@@ -18,5 +18,6 @@ router.post("/:collegeId/students/:id/assign-parent", requireRole(["college_admi
 router.post("/:collegeId/departments", requireRole(["college_admin", "super_admin"]), requireCollegeAccess, AdminController.addDepartment);
 router.put("/:collegeId/departments/:departmentId", requireRole(["college_admin", "super_admin"]), requireCollegeAccess, AdminController.updateDepartment);
 router.delete("/:collegeId/departments/:departmentId", requireRole(["college_admin", "super_admin"]), requireCollegeAccess, AdminController.deleteDepartment);
+router.get("/:collegeId/departments", requireRole(["college_admin", "super_admin"]), requireCollegeAccess, AdminController.getDepartment)
 
 export default router;

@@ -3,8 +3,13 @@ import DepartmentMember from "../models/DepartmentMember.model.js";
 export const requireDepartmentPermission = (permission) => {
     return async (req, res, next) => {
         try {
-            const userId = req.user._id;
+
+            const { _id: userId, role } = req.user;
             const { departmentId } = req.params;
+
+            if (["college_admin", "super_admin"].includes(role)) {
+                return next();
+            }
 
             const membership = await DepartmentMember.findOne({
                 userId,
