@@ -119,8 +119,9 @@ export const verifyToken = async (req, res) => {
         const authHeader = req.headers.authorization;
         if (!authHeader) return res.sendStatus(401);
 
-        const { payload, user } =
-            await AuthService.verifyAccessTokenAndGetUser(authHeader);
+        const { payload, user } = await AuthService.verifyAccessTokenAndGetUser(authHeader);
+
+        console.log(payload)     
 
         // Headers consumed by NGINX
         res.setHeader("X-User-Id", user._id.toString());
