@@ -79,9 +79,12 @@ export const getDepartment = async (req, res) => {
 export const addDepartment = async (req, res) => {
     try {
         const { collegeId } = req.params;
+        console.log(collegeId)
         const departments = await AdminService.addDepartment(collegeId, req.body);
+        console.log(departments)
         res.status(201).json({ success: true, departments });
     } catch (err) {
+        console.log(err)
         res.status(400).json({ success: false, message: err.message });
     }
 };
