@@ -40,7 +40,12 @@ export const applyForCollege = async (req, res, next) => {
             phone: data.requestedBy.phone,
             name: data.requestedBy.name,
             collegeName: data.collegeName,
-            verificationLink: `${process.env.AUTH_SERVICE_URL}/api/college/verify-email?token=${verificationToken}`
+            verificationLink: `${process.env.AUTH_SERVICE_URL}/api/college/verify-email?token=${verificationToken}`,
+            audit: {
+                userId: collegeName,
+                event: "COLLEGE_VERIFICATION_EMAIL_SENT",
+                metadata: { requestedBy }
+            }
         }
 
         console.log(`[MOCK EMAIL] Verify at: ${process.env.AUTH_SERVICE_URL}/api/college/verify-email?token=${verificationToken}`);

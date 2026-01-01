@@ -4,6 +4,7 @@ import { uploadToS3 } from "../utils/s3.js";
 import logger from "../utils/logger.js";
 import fs from "fs";
 import path from "path";
+import { connection } from "../lib/redis.js"
 
 const worker = new Worker("retryReportQueue", async job => {
     const { uploadJobId } = job.data;

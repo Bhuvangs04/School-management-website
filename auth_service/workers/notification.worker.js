@@ -267,7 +267,9 @@ async function sendCollegeVerificationEmail({
         html
     });
 
-    await saveAuditSafe(audit.userId, audit.event, audit.metadata);
+    if (audit?.userId) {
+        await saveAuditSafe(audit.userId, audit.event, audit.metadata);
+    }
 
     return { ok: true };
 }
