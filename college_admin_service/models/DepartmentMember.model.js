@@ -1,5 +1,3 @@
-import mongoose from "mongoose";
-
 const DepartmentMemberSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: "College", required: true },
@@ -7,15 +5,19 @@ const DepartmentMemberSchema = new mongoose.Schema({
 
     role: {
         type: String,
-        enum: ["HOD", "FACULTY", "ASSISTANT"],
+        enum: ["HOD", "FACULTY", "HOD_ASSISTANT"],
         required: true
     },
 
-    permissions: { type: Object, required: true },
+    permissions: {
+        type: [String],
+        required: true
+    },
 
-    createdAt: { type: Date, default: Date.now }
+    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    addedAt: { type: Date, default: Date.now },
+
+    isActive: { type: Boolean, default: true }
 });
 
 DepartmentMemberSchema.index({ userId: 1, departmentId: 1 }, { unique: true });
-
-export default mongoose.model("DepartmentMember", DepartmentMemberSchema);

@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 
 const DepartmentSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    hod: { type: String },
     courses: [{ type: String }]
 }, { _id: true });
 

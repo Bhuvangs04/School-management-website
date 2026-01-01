@@ -1,8 +1,6 @@
 import rabbitMQ from "../utils/rabbitmq.js";
 import logger from "../utils/logger.js";
 
-// Ensure RMQ connection is established ONCE
-await rabbitMQ.connect();
 
 class MQService {
     constructor() {
@@ -17,9 +15,16 @@ class MQService {
             AUTH_COLLEGE_EVENTS: "auth.college.events",
             COLLEGE_COLLEGE_EVENTS: "college.college.events",
             USER_REGISTERED: "user_registered", // point-to-point is fine here
+            AUTH_USER_EVENTS: "auth.user.events",
+            COLLEGE_USER_EVENTS: "college.user.events",
             ADMIN_ACTION: "admin_action",
             COLLEGE_CREATED_FIRST_EMAIL: "college_email_verification",
         };
+    }
+
+    async init() {
+        await rabbitMQ.connect();
+        logger.info("[RMQ] Connected successfully");
     }
 
     /* -------------------- PUBLISH EVENTS -------------------- */
@@ -67,6 +72,36 @@ class MQService {
     async publishUserRegistered(userData) {
         await rabbitMQ.publish(this.queues.USER_REGISTERED, userData);
         logger.info(`[RMQ] Queue → USER_REGISTERED for ${userData.email}`);
+    }
+
+    //  College → Auth (request user creation)
+    async publishUserOnboardRequested(payload) {
+        await rabbitMQ.publishFanout(
+            this.exchanges.USER_EVENTS,
+            {
+                type: "USER_ONBOARD_REQUESTED",
+                payload
+            }
+        );
+
+        logger.info(
+            `[RMQ] Fanout → USER_ONBOARD_REQUESTED for ${payload.email}`
+        );
+    }
+
+    // Auth → College (confirm user created)
+    async publishUserOnboarded(payload) {
+        await rabbitMQ.publishFanout(
+            this.exchanges.USER_EVENTS,
+            {
+                type: "USER_ONBOARDED",
+                payload
+            }
+        );
+
+        logger.info(
+            `[RMQ] Fanout → USER_ONBOARDED for ${payload.userId}`
+        );
     }
 
     // ✅ QUEUE — only notification/email service
@@ -124,6 +159,29 @@ class MQService {
                 logger.info(
                     `[RMQ][COLLEGE] ${event.type} → ${event.payload.collegeId}`
                 );
+                await callback(event);
+            }
+        );
+    }
+
+    async consumeUserEventsForAuth(callback) {
+        await rabbitMQ.consumeFanout(
+            this.exchanges.USER_EVENTS,
+            this.queues.AUTH_USER_EVENTS,
+            async (event) => {
+                logger.info(`[RMQ][AUTH] ${event.type}`);
+                await callback(event);
+            }
+        );
+    }
+
+
+    async consumeUserEventsForCollege(callback) {
+        await rabbitMQ.consumeFanout(
+            this.exchanges.USER_EVENTS,
+            this.queues.COLLEGE_USER_EVENTS,
+            async (event) => {
+                logger.info(`[RMQ][COLLEGE] ${event.type}`);
                 await callback(event);
             }
         );

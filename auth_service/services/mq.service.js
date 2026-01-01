@@ -11,7 +11,8 @@ class MQService {
         };
 
         this.queues = {
-            AUTH_COLLEGE_EVENTS: "auth.college.events", // 🔑 UNIQUE to auth-service
+            AUTH_COLLEGE_EVENTS: "auth.college.events",
+            AUTH_USER_EVENTS: "auth.user.events",
             USER_REGISTERED: "user_registered",
             ADMIN_ACTION: "admin_action",
             COLLEGE_EMAIL_VERIFICATION: "college_email_verification",
@@ -23,6 +24,7 @@ class MQService {
 
         // FANOUT
         this.consumeCollegeEvents();
+        this.consumeUserEvents();
 
         // QUEUE BASED (single consumer is fine)
         this.consumeUserRegistered();
@@ -31,6 +33,31 @@ class MQService {
     }
 
     /* ================= FANOUT CONSUMER ================= */
+
+    async consumeUserEvents() {
+        await rabbitMQ.consumeFanout(
+            this.exchanges.USER_EVENTS,
+            this.queues.AUTH_USER_EVENTS,
+            async (event) => {
+                try {
+                    switch (event.type) {
+
+                        case "USER_ONBOARD_REQUESTED":
+                            await this.handleUserOnboardRequested(event.payload);
+                            break;
+
+                        default:
+                            logger.warn(`[AUTH] Unknown USER event: ${event.type}`);
+                    }
+                } catch (err) {
+                    logger.error(`[AUTH] USER_EVENTS error: ${err.message}`);
+                }
+            }
+        );
+
+        logger.info("[AUTH] Listening to user.events (fanout)");
+    }
+
 
     async consumeCollegeEvents() {
         await rabbitMQ.consumeFanout(
@@ -58,6 +85,69 @@ class MQService {
 
         logger.info("[AUTH] Listening to college.events (fanout)");
     }
+
+    async handleUserOnboardRequested(payload) {
+        const {
+            eventId,
+            email,
+            name,
+            role,
+            collegeId,
+            departmentId,
+            addedBy
+        } = payload;
+
+        let user = await User.findOne({ email });
+        let rawPassword = null;
+
+        // Idempotent user creation
+        if (!user) {
+            rawPassword = makeTempPassword();
+            const hashed = await hashPassword(rawPassword);
+
+            user = await User.create({
+                name,
+                email,
+                passwordHash: hashed,
+                role,
+                collegeId,
+                passwordChanged: false
+            });
+
+            // Send temp password ONLY for new users
+            await notificationQueue.add("OneTimePassword", {
+                email,
+                name,
+                role,
+                tempory_password: rawPassword,
+                audit: {
+                    userId: user._id,
+                    event: "USER_ONBOARDED_TEMP_PASSWORD_SENT",
+                    metadata: { collegeId, departmentId }
+                }
+            });
+        }
+
+        // 🔁 CONFIRM BACK TO COLLEGE SERVICE
+        await rabbitMQ.publishFanout(
+            this.exchanges.USER_EVENTS,
+            {
+                type: "USER_ONBOARDED",
+                payload: {
+                    eventId,
+                    userId: user._id,
+                    email,
+                    role,
+                    collegeId,
+                    departmentId,
+                    addedBy
+                }
+            }
+        );
+
+        logger.info(`[AUTH] USER_ONBOARDED → ${email}`);
+    }
+
 
     async handleCollegeDeletion(data) {
         const { collegeId, recoverUntil, RecoverToken, collegeName, adminEmail } = data;

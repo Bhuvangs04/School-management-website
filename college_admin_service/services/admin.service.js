@@ -1,6 +1,7 @@
 import UploadJob from "../models/UploadJob.model.js";
 import Student from "../models/Student.model.js";
 import College from "../models/College.model.js"
+import DepartmentMember from "../models/DepartmentMember.model.js";
 import { studentImportQueue } from "../queues/queues.js";
 import { createAudit } from "../utils/audit.js";
 import { uploadToS3 } from "../utils/s3.js";
@@ -58,23 +59,43 @@ export const assignParentToStudent = async (collegeId, studentId, parentId) => {
     return student;
 };
 
-export const addDepartment = async (collegeId, departmentData) => {
-    const college = await College.findById(collegeId);
-    if (!college) throw new Error("College not found");
+export const getDepartmentsWithHod = async (collegeId) => {
+    //  Get departments
+    const college = await College.findById(collegeId)
+        .select("departments._id departments.name")
+        .lean();
 
-    const exists = college.departments.some(
-        d => d.name.toLowerCase() === departmentData.name.toLowerCase()
-    );
-    if (exists) throw new Error("Department already exists");
+    if (!college) {
+        throw new Error("College not found");
+    }
 
-    college.departments.push({
-        name: departmentData.name,
-        hod: departmentData.hod,
-        courses: departmentData.courses || []
-    });
+    //  Get all active HODs for this college
+    const hods = await DepartmentMember.find({
+        collegeId,
+        role: "HOD",
+        isActive: true
+    })
+        .populate("userId", "name email")
+        .lean();
 
-    await college.save();
-    return college.departments;
+    // Map departmentId → HOD
+    const hodMap = {};
+    for (const hod of hods) {
+        hodMap[hod.departmentId.toString()] = hod.userId;
+    }
+
+    // Merge
+    return college.departments.map(dep => ({
+        id: dep._id,
+        name: dep.name,
+        hod: hodMap[dep._id.toString()]
+            ? {
+                id: hodMap[dep._id.toString()]._id,
+                name: hodMap[dep._id.toString()].name,
+                email: hodMap[dep._id.toString()].email
+            }
+            : null
+    }));
 };
 
 export const updateDepartment = async (collegeId, departmentId, updateData) => {

@@ -1,5 +1,4 @@
 import * as AdminService from "../services/admin.service.js";
-import * as departmentService from "../services/departmentAccess.service.js"
 
 export const uploadStudents = async (req, res, next) => {
     try {
@@ -67,6 +66,15 @@ export const assignParent = async (req, res, next) => {
     }
 };
 
+export const getDepartment = async (req, res) => {
+    try {
+        const { collegeId } = req.params;
+        const departments = await AdminService.getDepartmentsWithHod(collegeId);
+        res.status(201).json({ success: true, departments });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+};
 
 export const addDepartment = async (req, res) => {
     try {

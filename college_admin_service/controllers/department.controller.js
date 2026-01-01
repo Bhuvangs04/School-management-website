@@ -4,14 +4,16 @@ import * as DepartmentService from "../services/department.service.js";
 
 export const assignFaculty = async (req, res, next) => {
     try {
-        const member = await DepartmentService.assignFaculty({
-            userId: req.body.userId,
+        const result = await DepartmentService.assignFaculty({
+            email: req.body.email,
+            name: req.body.name,
             role: req.body.role,
             collegeId: req.params.collegeId,
-            departmentId: req.params.departmentId
+            departmentId: req.params.departmentId,
+            addedBy: req.user._id
         });
 
-        res.status(201).json({ success: true, member });
+        res.status(202).json({ success: true, result });
     } catch (err) {
         next(err);
     }

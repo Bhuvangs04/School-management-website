@@ -1,29 +1,73 @@
 import DepartmentMember from "../models/DepartmentMember.model.js";
 import Subject from "../models/Subject.model.js";
-import User from "../models/User.model.js";
 import { DEPARTMENT_ROLES } from "../utils/roles.config.js";
+import { createAudit } from "../utils/audit.js";
+import MQService from "../services/mq.service.js";
+import { randomUUID } from "crypto";
 
 /* ---------------- FACULTY ---------------- */
 
 export const assignFaculty = async ({
-    userId,
+    email,
+    name,
+    role,
     collegeId,
     departmentId,
-    role
+    addedBy
 }) => {
-    const permissions = DEPARTMENT_ROLES[role];
-    if (!permissions) throw new Error("Invalid department role");
+    if (!DEPARTMENT_ROLES[role]) {
+        throw new Error("Invalid department role");
+    }
 
-    const user = await User.findById(userId).lean();
-    if (!user) throw new Error("User not found");
+    // Enforce ONE-HOD rule
+    if (role === "HOD") {
+        const existingHod = await DepartmentMember.findOne({
+            collegeId,
+            departmentId,
+            role: "HOD",
+            isActive: true
+        }).populate("userId", "email");
 
-    return await DepartmentMember.create({
-        userId,
+        if (existingHod) {
+            throw new Error(
+                "This department already has an assigned HOD. Remove or replace the existing HOD first."
+            );
+        }
+    }
+
+    const alreadyAssigned = await DepartmentMember.findOne({
         collegeId,
         departmentId,
+        isActive: true
+    }).populate("userId", "email");
+
+    if (alreadyAssigned?.userId?.email === email) {
+        throw new Error("User is already assigned to this department");
+    }
+
+    await MQService.publishUserOnboardRequested({
+        eventId: randomUUID(),
+        email,
+        name,
         role,
-        permissions
+        collegeId,
+        departmentId,
+        addedBy,
+        source: "COLLEGE_SERVICE"
     });
+
+    await createAudit(addedBy, "FACULTY_ONBOARD_REQUESTED", {
+        email,
+        role,
+        departmentId,
+        collegeId
+    });
+
+    return {
+        status: "ONBOARDING_REQUESTED",
+        email,
+        message: "Your request has been submitted. You’ll receive an update once onboarding is complete."
+    };
 };
 
 export const removeFaculty = async ({ userId, departmentId, collegeId }) => {

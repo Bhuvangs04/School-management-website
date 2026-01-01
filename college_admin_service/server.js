@@ -8,7 +8,10 @@ import logger from "./utils/logger.js";
 import rabbitMQ from "./utils/rabbitmq.js";
 import collegeRoutes from "./routes/college.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import departmentRoutes from "./routes/department.routes.js"
 import errorHandler from "./middleware/errorHandler.js";
+import MQService from "./services/mq.service.js";
+
 import fs from "fs";
 import { initCollegeConsumers } from "./consumers/college.consumer.js";
 
@@ -37,11 +40,14 @@ await connectDB();
 
 // RabbitMQ Connection
 await rabbitMQ.connect();
+await MQService.init();
+
 
 // Routes
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.use("/api/college", collegeRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/department", departmentRoutes);
 
 // Directories
 const uploadDir = process.env.UPLOAD_DIR || "./uploads";
