@@ -59,6 +59,27 @@ export const assignParentToStudent = async (collegeId, studentId, parentId) => {
     return student;
 };
 
+export const addDepartment = async (collegeId, departmentData) => {
+    const college = await College.findById(collegeId);
+    if (!college) throw new Error("College not found");
+
+    const exists = college.departments.some(
+        d => d.name.toLowerCase() === departmentData.name.toLowerCase()
+    );
+    if (exists) throw new Error("Department already exists");
+
+    const department = {
+        name: departmentData.name,
+        courses: departmentData.courses || []
+    };
+
+    college.departments.push(department);
+    await college.save();
+
+    return department;
+};
+
+
 export const getDepartmentsWithHod = async (collegeId) => {
     //  Get departments
     const college = await College.findById(collegeId)
