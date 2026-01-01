@@ -1,3 +1,6 @@
+import mongoose from "mongoose";
+
+
 const DepartmentMemberSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: "College", required: true },
@@ -21,3 +24,6 @@ const DepartmentMemberSchema = new mongoose.Schema({
 });
 
 DepartmentMemberSchema.index({ userId: 1, departmentId: 1 }, { unique: true });
+
+export default mongoose.model("DepartmentMember", DepartmentMemberSchema);
+
