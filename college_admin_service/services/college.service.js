@@ -52,7 +52,7 @@ export const deleteCollege = async (id) => {
     await college.save();
 
     await MQService.publishCollegeDeletion({
-        collegeId: college.code.toString(),
+        collegeId: college._id,
         collegeName: college.name,
         adminEmail: college.contactEmail,
         recoverUntil,
