@@ -2,14 +2,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { Queue } from "bullmq";
-import IORedis from "ioredis";
 import path from "path";
 import fs from "fs";
 
-const connection = new IORedis({
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    port: parseInt(process.env.REDIS_PORT || "6379", 10)
-});
+import { connection } from "../lib/redis.js";
+
 
 const studentImportQueue = new Queue("studentImportQueue", { connection });
 
