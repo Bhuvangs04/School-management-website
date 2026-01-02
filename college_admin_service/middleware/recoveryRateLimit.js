@@ -28,6 +28,7 @@ export const recoveryRateLimit = ({
 
             next();
         } catch (err) {
+            console.log(err)
             console.error("[RATE_LIMIT] Error:", err.message);
             return res.status(500).json({ message: "Rate limit error" });
         }
