@@ -20,6 +20,7 @@ export async function initCollegeConsumers() {
                 const {
                     eventId,
                     userId,
+                    email,
                     collegeId,
                     departmentId,
                     role,
@@ -47,6 +48,7 @@ export async function initCollegeConsumers() {
                     {
                         userId,
                         collegeId,
+                        email,
                         departmentId,
                         role,
                         permissions,

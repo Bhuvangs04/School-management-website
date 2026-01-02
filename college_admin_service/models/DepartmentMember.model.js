@@ -5,6 +5,11 @@ const DepartmentMemberSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: "College", required: true },
     departmentId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    email: {
+        type: String,
+        required: true,
+        index: true
+    },
 
     role: {
         type: String,

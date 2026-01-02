@@ -15,6 +15,7 @@ export const assignFaculty = async (req, res, next) => {
 
         res.status(202).json({ success: true, result });
     } catch (err) {
+        console.log(err);
         next(err);
     }
 };
