@@ -93,7 +93,6 @@ export const getDepartmentsWithHod = async (collegeId) => {
     // Get active HODs (NO populate)
     const hods = await DepartmentMember.find({
         collegeId,
-        role: "HOD",
         isActive: true
     })
         .select("departmentId userId email name")
@@ -116,7 +115,7 @@ export const getDepartmentsWithHod = async (collegeId) => {
         return {
             id: dep._id,
             name: dep.name,
-            hod: hod
+            Faculty_details: hod
         };
     });
 };
