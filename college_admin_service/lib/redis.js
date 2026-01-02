@@ -2,45 +2,26 @@ import IORedis from "ioredis";
 import dotenv from "dotenv";
 dotenv.config();
 
-let redisHealthy = false;
+export const connection = new IORedis({
+    host: process.env.REDIS_HOST || "127.0.0.1",
+    port: parseInt(process.env.REDIS_PORT || "6379", 10),
 
-export const connection = new IORedis(process.env.REDIS_URL, {
-    // Render-safe config
-    lazyConnect: false,
     enableReadyCheck: false,
-    maxRetriesPerRequest: 1,     // DO NOT retry commands forever
-    retryStrategy(times) {
-        return Math.min(times * 200, 2000);
-    },
-    keepAlive: 10000,
+    maxRetriesPerRequest: null,
     connectTimeout: 10000,
-    enableOfflineQueue: false,   //  IMPORTANT
+    keepAlive: 10000
+});
+
+connection.on("connect", () => {
+    console.log("[REDIS] Connected to local Redis");
 });
 
 connection.on("ready", () => {
-    redisHealthy = true;
     console.log("[REDIS] Ready");
 });
 
 connection.on("error", (err) => {
-    redisHealthy = false;
-
-    //  Ignore Render noise
-    if (
-        err?.message?.includes("Command timed out") ||
-        err?.code === "ECONNRESET" ||
-        err?.code === "ETIMEDOUT"
-    ) {
-        return;
-    }
-
-    console.error("[REDIS] Unexpected error:", err);
+    console.error("[REDIS] Error:", err.message);
 });
 
-connection.on("close", () => {
-    redisHealthy = false;
-});
-
-export function isRedisUp() {
-    return redisHealthy;
-}
+export default connection;
