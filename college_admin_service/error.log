@@ -1,0 +1,1 @@
+{"level":"error","message":"Error during shutdown mongoose is not defined","stack":"ReferenceError: mongoose is not defined\n    at process.shutdown (file:///C:/Users/Admin/Desktop/School_Management/college_admin_service/server.js:76:9)\n    at process.emit (node:events:518:28)","timestamp":"2026-01-02T17:27:56.699Z"}

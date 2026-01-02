@@ -20,3 +20,9 @@
 {"level":"info","message":"MongoDB connected","timestamp":"2025-12-21T12:30:39.056Z"}
 {"level":"info","message":"College Service listening on 5002","timestamp":"2025-12-21T12:30:39.071Z"}
 {"level":"info","message":"Shutting down server...","timestamp":"2025-12-21T12:44:35.197Z"}
+{"level":"info","message":"MongoDB connected","timestamp":"2026-01-02T17:27:30.345Z"}
+{"level":"info","message":"[RMQ] Connected successfully","timestamp":"2026-01-02T17:27:30.359Z"}
+{"level":"info","message":"[DEPARTMENT] User event consumer initialized","timestamp":"2026-01-02T17:27:30.364Z"}
+{"level":"info","message":"[STUDENT] College fanout consumer initialized","timestamp":"2026-01-02T17:27:30.369Z"}
+{"level":"info","message":"College Service listening on 5002","timestamp":"2026-01-02T17:27:30.380Z"}
+{"level":"info","message":"Shutting down server...","timestamp":"2026-01-02T17:27:56.693Z"}
