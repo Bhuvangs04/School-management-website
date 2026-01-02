@@ -28,12 +28,6 @@ export async function initCollegeConsumers() {
                     addedBy
                 } = payload;
 
-                const alreadyProcessed = await ProcessedEvent.findOne({ eventId });
-                if (alreadyProcessed) {
-                    logger.warn(`[DEPARTMENT] Duplicate USER_ONBOARDED ignored: ${eventId}`);
-                    return;
-                }
-
                 const permissions = DEPARTMENT_ROLES[role];
                 if (!permissions) {
                     logger.error(`[DEPARTMENT] Invalid role in USER_ONBOARDED: ${role}`);
@@ -66,7 +60,14 @@ export async function initCollegeConsumers() {
                     throw err;
                 }
 
-                await ProcessedEvent.create({ eventId });
+                try {
+                    await ProcessedEvent.create({ eventId, type: "USER_ONBOARDED" });
+                } catch (err) {
+                    if (err.code === 11000) {
+                        return;
+                    }
+                    throw err;
+                }
 
                 logger.info(
                     `[DEPARTMENT] USER_ONBOARDED → member synced ${userId}`
