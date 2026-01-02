@@ -2,7 +2,7 @@ import express from "express";
 import { verifyActionToken } from "../utils/actionToken.js";
 import RefreshSession from "../models/refreshSession.model.js";
 import ActionToken from "../models/ActionToken.model.js";
-import { blacklistJTI } from "../utils/jtiBlacklist.js";
+import { blacklistJTI } from "../utils/redisBlacklist.js";
 
 const router = express.Router();
 
