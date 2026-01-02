@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema(
         disabledUntil: Date,
         role: {
             type: String,
-            enum: ["super_admin", "college_admin", "teacher", "student", "parent", "HOD", "HOD_ASSISTANT", "STAFF"],
+            enum: ["super_admin", "college_admin", "teacher", "student", "parent", "HOD", "HOD_ASSISTANT", "FACULTY"],
             required: true
         },
         collegeId: {
