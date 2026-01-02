@@ -19,6 +19,7 @@ export const assignFaculty = async ({
         throw new Error("Invalid department role");
     }
 
+
     // Enforce ONE-HOD rule
     if (role === "HOD") {
         const existingHod = await DepartmentMember.findOne({

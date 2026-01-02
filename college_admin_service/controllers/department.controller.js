@@ -10,7 +10,7 @@ export const assignFaculty = async (req, res, next) => {
             role: req.body.role,
             collegeId: req.params.collegeId,
             departmentId: req.params.departmentId,
-            addedBy: req.user._id
+            addedBy: req.user.id
         });
 
         res.status(202).json({ success: true, result });

@@ -137,6 +137,7 @@ class MQService {
                 payload: {
                     eventId,
                     userId: user._id,
+                    name,
                     email,
                     role,
                     collegeId,

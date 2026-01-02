@@ -81,7 +81,7 @@ export const addDepartment = async (collegeId, departmentData) => {
 
 
 export const getDepartmentsWithHod = async (collegeId) => {
-    //  Get departments
+    // Get departments
     const college = await College.findById(collegeId)
         .select("departments._id departments.name")
         .lean();
@@ -90,34 +90,37 @@ export const getDepartmentsWithHod = async (collegeId) => {
         throw new Error("College not found");
     }
 
-    //  Get all active HODs for this college
+    // Get active HODs (NO populate)
     const hods = await DepartmentMember.find({
         collegeId,
         role: "HOD",
         isActive: true
     })
-        .populate("userId", "name email")
+        .select("departmentId userId email name")
         .lean();
 
-    // Map departmentId → HOD
+    // Map departmentId → HOD snapshot
     const hodMap = {};
     for (const hod of hods) {
-        hodMap[hod.departmentId.toString()] = hod.userId;
+        hodMap[hod.departmentId.toString()] = {
+            id: hod.userId,
+            email: hod.email,
+            name: hod.name
+        };
     }
 
-    // Merge
-    return college.departments.map(dep => ({
-        id: dep._id,
-        name: dep.name,
-        hod: hodMap[dep._id.toString()]
-            ? {
-                id: hodMap[dep._id.toString()]._id,
-                name: hodMap[dep._id.toString()].name,
-                email: hodMap[dep._id.toString()].email
-            }
-            : null
-    }));
+    // Merge departments with HOD
+    return college.departments.map(dep => {
+        const hod = hodMap[dep._id.toString()] || null;
+
+        return {
+            id: dep._id,
+            name: dep.name,
+            hod: hod
+        };
+    });
 };
+
 
 export const updateDepartment = async (collegeId, departmentId, updateData) => {
     const college = await College.findById(collegeId);
