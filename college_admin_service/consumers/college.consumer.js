@@ -29,34 +29,42 @@ export async function initCollegeConsumers() {
 
                 const alreadyProcessed = await ProcessedEvent.findOne({ eventId });
                 if (alreadyProcessed) {
-                    logger.warn(
-                        `[DEPARTMENT] Duplicate USER_ONBOARDED ignored: ${eventId}`
-                    );
+                    logger.warn(`[DEPARTMENT] Duplicate USER_ONBOARDED ignored: ${eventId}`);
                     return;
                 }
 
                 const permissions = DEPARTMENT_ROLES[role];
                 if (!permissions) {
-                    logger.error(
-                        `[DEPARTMENT] Invalid role in USER_ONBOARDED: ${role}`
-                    );
+                    logger.error(`[DEPARTMENT] Invalid role in USER_ONBOARDED: ${role}`);
                     return;
                 }
 
-                await DepartmentMember.findOneAndUpdate(
-                    { userId, departmentId },
-                    {
-                        userId,
-                        collegeId,
-                        email,
-                        departmentId,
-                        role,
-                        permissions,
-                        addedBy,
-                        isActive: true
-                    },
-                    { upsert: true, new: true }
-                );
+                try {
+                    await DepartmentMember.findOneAndUpdate(
+                        { userId, departmentId },
+                        {
+                            userId,
+                            collegeId,
+                            email,
+                            departmentId,
+                            role,
+                            permissions,
+                            addedBy,
+                            isActive: true
+                        },
+                        { upsert: true, new: true }
+                    );
+                } catch (err) {
+                    if (err.code === 11000 && role === "HOD") {
+                        logger.warn(
+                            `[DEPARTMENT] HOD already exists for department ${departmentId}`
+                        );
+                        return;
+                    }
+                    throw err;
+                }
+
+                await ProcessedEvent.create({ eventId });
 
                 logger.info(
                     `[DEPARTMENT] USER_ONBOARDED → member synced ${userId}`

@@ -1,10 +1,21 @@
 import mongoose from "mongoose";
 
-
 const DepartmentMemberSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: "College", required: true },
-    departmentId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
+    },
+
+    collegeId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
+    },
+
+    departmentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
+    },
+
     email: {
         type: String,
         required: true,
@@ -19,16 +30,40 @@ const DepartmentMemberSchema = new mongoose.Schema({
 
     permissions: {
         type: [String],
-        required: true
+        default: []
     },
 
-    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    addedAt: { type: Date, default: Date.now },
+    addedBy: {
+        type: mongoose.Schema.Types.ObjectId
+    },
 
-    isActive: { type: Boolean, default: true }
-});
+    addedAt: {
+        type: Date,
+        default: Date.now
+    },
 
-DepartmentMemberSchema.index({ userId: 1, departmentId: 1 }, { unique: true });
+    isActive: {
+        type: Boolean,
+        default: true
+    }
+}, { timestamps: true });
+
+/* Prevent duplicate assignment */
+DepartmentMemberSchema.index(
+    { userId: 1, departmentId: 1 },
+    { unique: true }
+);
+
+/* Enforce ONE active HOD per department (concurrency-safe) */
+DepartmentMemberSchema.index(
+    { collegeId: 1, departmentId: 1, role: 1 },
+    {
+        unique: true,
+        partialFilterExpression: {
+            role: "HOD",
+            isActive: true
+        }
+    }
+);
 
 export default mongoose.model("DepartmentMember", DepartmentMemberSchema);
-

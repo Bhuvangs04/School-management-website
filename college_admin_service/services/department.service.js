@@ -26,7 +26,7 @@ export const assignFaculty = async ({
             departmentId,
             role: "HOD",
             isActive: true
-        }).populate("userId", "email");
+        });
 
         if (existingHod) {
             throw new Error(
@@ -38,10 +38,11 @@ export const assignFaculty = async ({
     const alreadyAssigned = await DepartmentMember.findOne({
         collegeId,
         departmentId,
+        email,
         isActive: true
-    }).populate("userId", "email");
+    });
 
-    if (alreadyAssigned?.userId?.email === email) {
+    if (alreadyAssigned) {
         throw new Error("User is already assigned to this department");
     }
 
