@@ -22,7 +22,9 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true
         },
-        status: { type: String, enum: ["ACTIVE", "DISABLED", "DELETED"] },
+        status: {
+            type: String, enum: ["ACTIVE", "DISABLED", "DELETED"], default: "ACTIVE", index: true
+        },
         disabledReason: String,
         disabledUntil: Date,
         role: {
@@ -33,7 +35,9 @@ const userSchema = new mongoose.Schema(
         collegeId: {
             type: String,
             // ref: "College",
-            default: null
+            default: null,
+            index: true
+
         },
         code: {
             type: String,

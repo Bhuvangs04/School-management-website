@@ -66,6 +66,9 @@ export const deleteCollege = async (id) => {
 
 
 export const recoverCollege = async (token) => {
+    if (!token) {
+        throw new Error("Recovery token missing");
+    }
     const college = await College.findOne({
         recoverToken: token,
         recoverTokenExpiresAt: { $gt: new Date() },
@@ -92,6 +95,6 @@ export const recoverCollege = async (token) => {
 
 
     return {
-        message: "College scheduled for deletion",
+        message: "College scheduled for Recover",
     };
 };

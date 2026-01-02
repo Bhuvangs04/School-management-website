@@ -308,9 +308,11 @@ export const deleteCollege = async (req, res, next) => {
 export const recoverCollege = async (req, res, next) => {
     try {
         const result = await CollegeService.recoverCollege(req.query.token);
+        console.log(result);
         res.json({ success: true, message: result });
 
     } catch (err) {
+        console.error("RECOVER ERROR:", err);
         next(err);
     }
 }
