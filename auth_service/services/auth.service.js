@@ -309,6 +309,11 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
     const newRefreshToken = createRefreshToken();
     const newRefreshTokenHash = hashToken(newRefreshToken);
     const newJti = generateJTI();
+    // for single device activation
+    // if (session.jti && session.jti !== newJti) {
+    //     await blacklistJTI(session.jti, ttlSec);
+    // }
+
     const expiresDays = parseInt(process.env.REFRESH_TOKEN_EXPIRES_DAYS || "7", 10);
     const newExp = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
 
@@ -435,7 +440,8 @@ export const verifyAccessTokenAndGetUser = async (authHeader) => {
     console.log(payload)
 
     if (payload.jti) {
-        const blocked = await isJtiBlacklisted(`blacklist:jti:${payload.jti}`);
+        const blocked = await isJtiBlacklisted(payload.jti);
+        console.log(blocked);
         if (blocked) {
             throw new Error("Token revoked");
         }

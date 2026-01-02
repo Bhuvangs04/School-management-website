@@ -25,6 +25,7 @@ export async function isJtiBlacklisted(jti) {
     try {
         const key = `bl_jti:${jti}`;
         const v = await connection.get(key);
+        console.log(v);
         return !!v;
     } catch (err) {
         console.error("[REDIS] isJtiBlacklisted error", err);
