@@ -23,6 +23,7 @@ export async function blacklistJTI(jti, expiresAt = null) {
 export async function isJtiBlacklisted(jti) {
     if (!jti) return false;
     try {
+        console.log(jti)
         const key = `bl_jti:${jti}`;
         const v = await connection.get(key);
         console.log(v);
