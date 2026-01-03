@@ -1,6 +1,6 @@
 import IORedis from "ioredis";
 import dotenv from "dotenv";
-import logger from "../utils/logger";
+import logger from "../utils/logger.js";
 dotenv.config();
 
 export const connection = new IORedis(process.env.REDIS_URL, {

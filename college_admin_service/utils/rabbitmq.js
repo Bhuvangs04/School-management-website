@@ -1,6 +1,6 @@
 import amqp from "amqplib";
 import dotenv from "dotenv";
-import logger from "./logger";
+import logger from "./logger.js";
 dotenv.config();
 
 class RabbitMQ {
