@@ -3,6 +3,9 @@ import { normalizeIP } from "../utils/ip.js";
 import logger from "../utils/logger.js";
 import RefreshSession from "../models/refreshSession.model.js";
 
+const refreshDaysRaw = process.env.REFRESH_TOKEN_EXPIRES_DAYS;
+const refreshDays = Number.isFinite(Number(refreshDaysRaw)) ? Number(refreshDaysRaw) : 7;
+
 const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
