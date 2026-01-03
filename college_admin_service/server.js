@@ -9,7 +9,7 @@ import rabbitMQ from "./utils/rabbitmq.js";
 import collegeRoutes from "./routes/college.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import departmentRoutes from "./routes/department.routes.js"
-import errorHandler from "./middleware/errorHandler.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 import MQService from "./services/mq.service.js";
 import { requestLogger } from "./middleware/requestLogger.js"
 
