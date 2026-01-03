@@ -6,14 +6,9 @@ import RefreshSession from "../models/refreshSession.model.js";
 const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
+    sameSite: "strict",
     path: "/",
-    maxAge:
-        Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS || 7) *
-        24 *
-        60 *
-        60 *
-        1000
+    maxAge: refreshDays * 24 * 60 * 60 * 1000
 };
 
 /* =========================

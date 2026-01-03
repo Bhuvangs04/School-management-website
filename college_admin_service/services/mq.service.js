@@ -73,7 +73,7 @@ class MQService {
 
         logger.info("RMQ event published", {
             type: "COLLEGE_RECOVER",
-            collegeId: payload.collegeId
+            collegeId: collegeId.collegeName
         });
     }
 
