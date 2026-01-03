@@ -2,6 +2,9 @@ import rabbitMQ from "../utils/rabbitmq.js";
 import logger from "../utils/logger.js";
 
 
+
+
+
 class MQService {
     constructor() {
         // FANOUT EXCHANGES (shared events)
@@ -22,15 +25,23 @@ class MQService {
         };
     }
 
+
     async init() {
         await rabbitMQ.connect();
         logger.info("[RMQ] Connected successfully");
+    }
+
+    validateCollegePayload(collegeData) {
+        if (!collegeData || !collegeData.collegeId) {
+            throw new Error("Invalid college event payload");
+        }
     }
 
     /* -------------------- PUBLISH EVENTS -------------------- */
 
     // 🔁 FANOUT — both services MUST receive this
     async publishCollegeCreated(collegeData) {
+        this.validateCollegePayload(collegeData);
         await rabbitMQ.publishFanout(
             this.exchanges.COLLEGE_EVENTS,
             {
@@ -41,12 +52,13 @@ class MQService {
 
         logger.info("RMQ event published", {
             type: "COLLEGE_CREATED",
-            collegeId: payload.collegeId
+            collegeId: collegeData.collegeId
         });    
     }
 
     // 🔁 FANOUT — deletion affects auth + college services
     async publishCollegeDeletion(collegeData) {
+        this.validateCollegePayload(collegeData);
         await rabbitMQ.publishFanout(
             this.exchanges.COLLEGE_EVENTS,
             {
@@ -57,12 +69,13 @@ class MQService {
 
         logger.info("RMQ event published", {
             type: "COLLEGE_DELETION",
-            collegeId: payload.collegeId
+            collegeId: collegeData.collegeId
         });
     }
 
     // 🔁 FANOUT — recovery affects auth + college services
     async publishCollegeRecover(collegeData) {
+        this.validateCollegePayload(collegeData);
         await rabbitMQ.publishFanout(
             this.exchanges.COLLEGE_EVENTS,
             {
@@ -73,12 +86,13 @@ class MQService {
 
         logger.info("RMQ event published", {
             type: "COLLEGE_RECOVER",
-            collegeId: collegeId.collegeName
+            collegeId: collegeData.collegeId
         });
     }
 
     // ✅ QUEUE — only auth service cares
     async publishUserRegistered(userData) {
+
         await rabbitMQ.publish(this.queues.USER_REGISTERED, userData);
         logger.info("RMQ event published", {
             type: "USER_REGISTERED",
