@@ -87,7 +87,7 @@ export const recoverCollege = async (token) => {
 
 
     await MQService.publishCollegeRecover({
-        collegeId: college.code.toString(),
+        collegeId: college._id,
         collegeName: college.name,
         adminEmail: college.contactEmail,
         recover: "true"
