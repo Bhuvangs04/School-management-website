@@ -12,7 +12,7 @@ const logger = winston.createLogger({
     },
     transports: [
         new winston.transports.File({
-            filename: "/var/log/school-app/auth.log",
+            filename: "/var/log/school-app/auth-error.log",
             level: "error"
         }),
         new winston.transports.File({
