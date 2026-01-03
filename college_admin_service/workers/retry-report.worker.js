@@ -11,7 +11,8 @@ const worker = new Worker("retryReportQueue", async job => {
     const uj = await UploadJob.findById(uploadJobId);
     if (!uj) throw new Error("UploadJob not found");
 
-    logger.info(`Retrying report generation for job ${uploadJobId}`);
+    logger.info("Retry report job started", { jobId: uploadJobId });
+
 
     // Check if report exists locally
     const reportDir = process.env.REPORT_DIR || "./reports";
@@ -34,14 +35,20 @@ const worker = new Worker("retryReportQueue", async job => {
     uj.reportPath = reportRef;
     await uj.save();
 
-    logger.info(`Report retry successful for job ${uploadJobId}`);
+    logger.info("Retry report job completed", {
+        jobId: uploadJobId,
+        reportPath: reportRef
+    });
     return { ok: true, reportPath: reportRef };
 }, {
     connection
 });
 
 worker.on("failed", (job, err) => {
-    logger.error("retryReport worker failed", job?.id, err?.message);
+    logger.error("Retry report worker failed", {
+        jobId: job?.id,
+        message: err.message
+    });
 });
 
 logger.info("retryReport worker started");

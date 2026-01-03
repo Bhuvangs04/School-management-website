@@ -31,6 +31,11 @@ class MQService {
         this.consumeUserRegistered();
         this.consumeAdminAction();
         this.consumeCollegeEmailVerification();
+
+        logger.info("MQ service initialized", {
+            category: "mq",
+            service: "auth-service"
+        });
     }
 
     /* ================= FANOUT CONSUMER ================= */
@@ -48,15 +53,26 @@ class MQService {
                             break;
 
                         default:
-                            logger.warn(`[AUTH] Unknown USER event: ${event.type}`);
+                            logger.warn("Unknown USER event", {
+                                category: "mq",
+                                eventType: event.type
+                            });
                     }
                 } catch (err) {
-                    logger.error(`[AUTH] USER_EVENTS error: ${err.message}`);
+                    logger.error("USER_EVENTS handler failed", {
+                        category: "mq",
+                        eventType: event.type,
+                        message: err.message,
+                        stack: err.stack
+                    });
                 }
             }
         );
 
-        logger.info("[AUTH] Listening to user.events (fanout)");
+        logger.info("Listening to USER_EVENTS", {
+            category: "mq",
+            exchange: this.exchanges.USER_EVENTS
+        });
     }
 
 
@@ -79,12 +95,18 @@ class MQService {
                         break;
 
                     default:
-                        logger.warn(`[AUTH] Unknown college event: ${event.type}`);
+                        logger.warn("Unknown COLLEGE event", {
+                            category: "mq",
+                            eventType: event.type
+                        });
                 }
             }
         );
 
-        logger.info("[AUTH] Listening to college.events (fanout)");
+        logger.info("Listening to COLLEGE_EVENTS", {
+            category: "mq",
+            exchange: this.exchanges.COLLEGE_EVENTS
+        });
     }
 
     async handleUserOnboardRequested(payload) {
@@ -147,7 +169,12 @@ class MQService {
             }
         );
 
-        logger.info(`[AUTH] USER_ONBOARDED → ${email}`);
+        logger.info("User onboarded", {
+            category: "mq",
+            action: "USER_ONBOARDED",
+            email,
+            userId: user._id
+        });
     }
 
 
@@ -183,7 +210,10 @@ class MQService {
             { attempts: 5 }
         );
 
-        logger.info(`[AUTH] Users disabled + email queued for ${collegeId}`);
+        logger.warn("College deleted – users disabled", {
+            category: "college",
+            collegeId
+        });
     }
 
     async handleCollegeRecover(data) {
@@ -213,7 +243,10 @@ class MQService {
             { attempts: 5 }
         );
 
-        logger.info(`[AUTH] Users re-enabled for ${collegeId}`);
+        logger.info("College recovered – users re-enabled", {
+            category: "college",
+            collegeId
+        });
     }
 
     async handleCollegeCreated(data) {
@@ -252,7 +285,11 @@ class MQService {
             }
         });
 
-        logger.info(`[AUTH] College admin created → ${adminEmail}`);
+        logger.info("College admin created", {
+            category: "college",
+            collegeId,
+            adminEmail
+        });
     }
 
 
@@ -295,21 +332,31 @@ class MQService {
                 });
 
             } catch (err) {
-                logger.error(`[AUTH] USER_REGISTERED error: ${err.message}`);
+                logger.error("USER_REGISTERED processing failed", {
+                    category: "mq",
+                    message: err.message,
+                    stack: err.stack
+                });
             }
         });
     }
 
     async consumeAdminAction() {
         await rabbitMQ.consume(this.queues.ADMIN_ACTION, async (data) => {
-            logger.info(`[AUTH] ADMIN_ACTION → ${data.action}`);
+            logger.info("Admin action received", {
+                category: "admin",
+                action: data.action
+            });
         });
     }
 
     async consumeCollegeEmailVerification() {
         await rabbitMQ.consume(this.queues.COLLEGE_EMAIL_VERIFICATION, async (data) => {
             await notificationQueue.add("CollegeVerificationEmail", data);
-            logger.info(`[AUTH] Verification email queued → ${data.email}`);
+            logger.info("College verification email queued", {
+                category: "email",
+                email: data.email
+            });
         });
     }
 }

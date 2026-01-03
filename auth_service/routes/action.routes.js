@@ -3,6 +3,7 @@ import { verifyActionToken } from "../utils/actionToken.js";
 import RefreshSession from "../models/refreshSession.model.js";
 import ActionToken from "../models/ActionToken.model.js";
 import { blacklistJTI } from "../utils/redisBlacklist.js";
+import logger from "../utils/logger.js";
 
 const router = express.Router();
 
@@ -76,7 +77,7 @@ router.get("/capture", async (req, res) => {
         return res.status(400).send("Unknown action");
 
     } catch (err) {
-        console.error("[ACTION_CAPTURE]", err);
+        logger.error("[ACTION_CAPTURE]", err);
         return res.status(401).send("Invalid or expired action link");
     }
 });

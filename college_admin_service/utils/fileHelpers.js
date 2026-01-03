@@ -1,11 +1,18 @@
 import fs from 'fs';
 import path from 'path';
 import { fileTypeFromBuffer } from 'file-type';
+import logger from './logger';
 
 export const cleanupFile = (filePath) => {
     if (fs.existsSync(filePath)) {
         fs.unlink(filePath, (err) => {
-            if (err) console.error(`Failed to delete file: ${filePath}`, err);
+            if (err) {
+                logger.error("File cleanup failed", {
+                    filePath,
+                    message: err.message,
+                    stack: err.stack
+                });
+            }
         });
     }
 };

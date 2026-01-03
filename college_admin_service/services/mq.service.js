@@ -39,7 +39,10 @@ class MQService {
             }
         );
 
-        logger.info(`[RMQ] Fanout → COLLEGE_CREATED for ${collegeData.name}`);
+        logger.info("RMQ event published", {
+            type: "COLLEGE_CREATED",
+            collegeId: payload.collegeId
+        });    
     }
 
     // 🔁 FANOUT — deletion affects auth + college services
@@ -52,7 +55,10 @@ class MQService {
             }
         );
 
-        logger.info(`[RMQ] Fanout → COLLEGE_DELETION for ${collegeData.name}`);
+        logger.info("RMQ event published", {
+            type: "COLLEGE_DELETION",
+            collegeId: payload.collegeId
+        });
     }
 
     // 🔁 FANOUT — recovery affects auth + college services
@@ -65,13 +71,20 @@ class MQService {
             }
         );
 
-        logger.info(`[RMQ] Fanout → COLLEGE_RECOVER for ${collegeData.name}`);
+        logger.info("RMQ event published", {
+            type: "COLLEGE_RECOVER",
+            collegeId: payload.collegeId
+        });
     }
 
     // ✅ QUEUE — only auth service cares
     async publishUserRegistered(userData) {
         await rabbitMQ.publish(this.queues.USER_REGISTERED, userData);
-        logger.info(`[RMQ] Queue → USER_REGISTERED for ${userData.email}`);
+        logger.info("RMQ event published", {
+            type: "USER_REGISTERED",
+            user_details: userData.email
+        });
+
     }
 
     //  College → Auth (request user creation)
@@ -84,9 +97,10 @@ class MQService {
             }
         );
 
-        logger.info(
-            `[RMQ] Fanout → USER_ONBOARD_REQUESTED for ${payload.email}`
-        );
+        logger.info("RMQ event published", {
+            type: "ONBOARD_REQUEST",
+            user_details: payload.email
+        });
     }
 
     // Auth → College (confirm user created)
@@ -99,9 +113,10 @@ class MQService {
             }
         );
 
-        logger.info(
-            `[RMQ] Fanout → USER_ONBOARDED for ${payload.userId}`
-        );
+        logger.info("RMQ event published", {
+            type: "ONBOARD_REQUEST",
+            user_details: payload.email
+        });
     }
 
     // ✅ QUEUE — only notification/email service
@@ -111,15 +126,19 @@ class MQService {
             collegeData
         );
 
-        logger.info(
-            `[RMQ] Queue → COLLEGE_EMAIL_VERIFICATION for ${collegeData.name}`
-        );
+        logger.info("RMQ event published", {
+            type: "COLLEGE_VERIFICATION",
+            Details: collegeData.name
+        });
     }
 
     // ✅ QUEUE — admin actions are single-consumer
     async publishAdminAction(actionData) {
         await rabbitMQ.publish(this.queues.ADMIN_ACTION, actionData);
-        logger.info(`[RMQ] Queue → ADMIN_ACTION ${actionData.action}`);
+        logger.info("RMQ event published", {
+            type: "ADMIN_ACTION",
+            Details: actionData.action
+        });
     }
 
     /* -------------------- CONSUME EVENTS -------------------- */
@@ -129,7 +148,10 @@ class MQService {
         await rabbitMQ.consume(
             this.queues.USER_REGISTERED,
             async (data) => {
-                logger.info(`[RMQ] USER_REGISTERED → ${data.email}`);
+                logger.info("RMQ event consumed", {
+                    type: "USER_REGISTERED",
+                    Details: data.email
+                });                
                 await callback(data);
             }
         );
@@ -142,9 +164,10 @@ class MQService {
             this.exchanges.COLLEGE_EVENTS,
             this.queues.AUTH_COLLEGE_EVENTS,
             async (event) => {
-                logger.info(
-                    `[RMQ][AUTH] ${event.type} → ${event.payload.collegeId}`
-                );
+                logger.info("RMQ event consumed", {
+                    type: event.type,
+                    Details: event.payload.collegeId
+                });
                 await callback(event);
             }
         );
@@ -156,9 +179,10 @@ class MQService {
             this.exchanges.COLLEGE_EVENTS,
             this.queues.COLLEGE_COLLEGE_EVENTS,
             async (event) => {
-                logger.info(
-                    `[RMQ][COLLEGE] ${event.type} → ${event.payload.collegeId}`
-                );
+                logger.info("RMQ event consumed", {
+                    type: event.type,
+                    Details: event.payload.collegeId
+                });
                 await callback(event);
             }
         );
@@ -169,7 +193,9 @@ class MQService {
             this.exchanges.USER_EVENTS,
             this.queues.AUTH_USER_EVENTS,
             async (event) => {
-                logger.info(`[RMQ][AUTH] ${event.type}`);
+                logger.info("RMQ event consumed", {
+                    type: event.type,
+                });
                 await callback(event);
             }
         );
@@ -181,7 +207,9 @@ class MQService {
             this.exchanges.USER_EVENTS,
             this.queues.COLLEGE_USER_EVENTS,
             async (event) => {
-                logger.info(`[RMQ][COLLEGE] ${event.type}`);
+                logger.info("RMQ event consumed", {
+                    type: event.type,
+                });
                 await callback(event);
             }
         );

@@ -12,6 +12,8 @@ import io from "@pm2/io";
 import { metrics } from "./metrics/pm2.metrics.js";
 import MQService from "./services/mq.service.js";
 import { verifyToken } from "./controllers/auth.controller.js";
+import logger from "./utils/logger.js";
+import { requestLogger } from "./middlewares/requestLogger.js";
 
 
 io.metric({
@@ -37,6 +39,8 @@ app.use(cookieParser());
 app.use(cors());
 app.use(helmet());
 
+app.use(requestLogger)
+
 
 const loginLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -53,6 +57,6 @@ app.get("/service/verify", verifyToken);
 
 
 app.listen(process.env.PORT, async () => {
-    console.log(`AUTH SERVICE RUNNING ON PORT ${process.env.PORT}`);
+    logger.info(`AUTH SERVICE RUNNING ON PORT ${process.env.PORT}`);
     await MQService.init();
 });

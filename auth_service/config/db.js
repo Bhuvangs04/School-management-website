@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import logger from "../utils/logger";
 
 const connectDB = async () => {
     try {
@@ -12,9 +13,9 @@ const connectDB = async () => {
             retryWrites: true,
             compressors: ['snappy']
         });
-        console.log("Auth Service: MongoDB Connected ✔");
+        logger.info("Auth Service: MongoDB Connected ✔");
     } catch (error) {
-        console.error("MongoDB Error", error.message);
+        logger.error("MongoDB Error", error.message);
     }
 };
 

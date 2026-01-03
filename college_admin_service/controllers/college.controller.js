@@ -2,13 +2,23 @@ import * as CollegeService from "../services/college.service.js";
 import MQService from "../services/mq.service.js";
 import AppliedCollege from "../models/AppliedCollege.model.js";
 import College from "../models/College.model.js";
-import crypto from "crypto";
 import Audit from "../models/Audit.model.js";
+import crypto from "crypto";
+import logger from "../utils/logger.js";
 
-
+/**
+ * Apply for college
+ */
 export const applyForCollege = async (req, res, next) => {
     try {
         const { collegeName, officialWebsite, requestedBy, allowedDomain } = req.body;
+
+        logger.info("College application request received", {
+            requestId: req.requestId,
+            collegeName,
+            officialWebsite,
+            email: requestedBy?.email
+        });
 
         const existing = await AppliedCollege.findOne({
             $or: [
@@ -18,6 +28,12 @@ export const applyForCollege = async (req, res, next) => {
         });
 
         if (existing) {
+            logger.warn("Duplicate college application attempt", {
+                requestId: req.requestId,
+                email: requestedBy.email,
+                officialWebsite
+            });
+
             return res.status(400).json({
                 success: false,
                 message: "Application already exists for this email or website"
@@ -26,7 +42,7 @@ export const applyForCollege = async (req, res, next) => {
 
         const verificationToken = crypto.randomBytes(32).toString("hex");
 
-        const data = await AppliedCollege.create({
+        const application = await AppliedCollege.create({
             collegeName,
             officialWebsite,
             requestedBy,
@@ -35,22 +51,24 @@ export const applyForCollege = async (req, res, next) => {
             status: "pending"
         });
 
-        const required_data = {
-            email: data.requestedBy.email,
-            phone: data.requestedBy.phone,
-            name: data.requestedBy.name,
-            collegeName: data.collegeName,
+        await MQService.publishSendCollegeVerificationEmail({
+            email: application.requestedBy.email,
+            phone: application.requestedBy.phone,
+            name: application.requestedBy.name,
+            collegeName: application.collegeName,
             verificationLink: `${process.env.AUTH_SERVICE_URL}/api/college/verify-email?token=${verificationToken}`,
             audit: {
                 userId: collegeName,
                 event: "COLLEGE_VERIFICATION_EMAIL_SENT",
                 metadata: { requestedBy }
             }
-        }
+        });
 
-        console.log(`[MOCK EMAIL] Verify at: ${process.env.AUTH_SERVICE_URL}/api/college/verify-email?token=${verificationToken}`);
-
-        await MQService.publishSendCollegeVerificationEmail(required_data)
+        logger.info("College application created", {
+            requestId: req.requestId,
+            applicationId: application._id,
+            collegeName
+        });
 
         res.status(201).json({
             success: true,
@@ -58,34 +76,49 @@ export const applyForCollege = async (req, res, next) => {
         });
 
     } catch (err) {
+        logger.error("Apply for college failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 };
 
-
-
+/**
+ * Verify college email & auto approve
+ */
 export const verifyCollegeEmail = async (req, res, next) => {
     try {
         const { token } = req.query;
-        if (!token)
-            return res.status(400).json({ success: false, message: "Token required" });
-
-        const application = await AppliedCollege.findOne({ verificationToken: token });
-        if (!application)
-            return res.status(404).json({ success: false, message: "Invalid token" });
-
-        if (application.status !== "pending") {
-            return res.status(400).json({
-                success: false,
-                message: "Application already processed"
-            });
+        if (!token) {
+            const error = new Error("Token required");
+            error.statusCode = 400;
+            throw error;
         }
 
-        // 1️⃣ Mark email as verified
+        const application = await AppliedCollege.findOne({ verificationToken: token });
+        if (!application) {
+            const error = new Error("Invalid token");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (application.status !== "pending") {
+            const error = new Error("Application already processed");
+            error.statusCode = 400;
+            throw error;
+        }
+
         application.status = "email_verified";
         await application.save();
 
-        // AUDIT LOG → Email verified
+        logger.info("College email verified", {
+            requestId: req.requestId,
+            applicationId: application._id,
+            email: application.requestedBy.email
+        });
+
         await Audit.create({
             event: "COLLEGE_EMAIL_VERIFIED",
             metadata: {
@@ -95,40 +128,34 @@ export const verifyCollegeEmail = async (req, res, next) => {
             }
         });
 
-        // 2️⃣ Try extract valid domain
         let allowedDomain = null;
-
         try {
-            if (application.officialWebsite) {
-                const parsed = new URL(application.officialWebsite);
-                const host = parsed.hostname.replace("www.", "");
-                if (host.includes(".")) allowedDomain = host;
-            }
-        } catch (err) {
-            allowedDomain = null;
-        }
+            const parsed = new URL(application.officialWebsite);
+            const host = parsed.hostname.replace("www.", "");
+            if (host.includes(".")) allowedDomain = host;
+        } catch (_) { }
 
-        // 3️⃣ If no valid domain → manual approval required
         if (!allowedDomain) {
+            logger.warn("Auto approval skipped due to invalid domain", {
+                requestId: req.requestId,
+                applicationId: application._id,
+                officialWebsite: application.officialWebsite
+            });
 
-            // AUDIT LOG → Domain invalid, manual approval needed
             await Audit.create({
                 event: "COLLEGE_AUTO_APPROVAL_SKIPPED_INVALID_DOMAIN",
                 metadata: {
                     applicationId: application._id,
-                    officialWebsite: application.officialWebsite,
-                    reason: "Invalid or missing domain",
+                    officialWebsite: application.officialWebsite
                 }
             });
 
             return res.json({
                 success: true,
-                message:
-                    "Email verified. But website domain is invalid or missing. Super Admin must manually approve."
+                message: "Email verified. Manual approval required."
             });
         }
 
-        // 4️⃣ Auto approve the college
         const count = await College.countDocuments();
         const code = `COL${String(count + 1).padStart(3, "0")}`;
 
@@ -144,61 +171,92 @@ export const verifyCollegeEmail = async (req, res, next) => {
         application.collegeId = newCollege._id;
         await application.save();
 
-        // 5️⃣ Publish event to Auth Service
         await MQService.publishCollegeCreated({
             collegeId: newCollege._id,
             code: newCollege.code,
             name: newCollege.name,
-            allowedDomain: newCollege.allowedDomain,
+            allowedDomain,
             adminEmail: newCollege.contactEmail,
             adminPhone: newCollege.contactNumber
         });
 
-        // AUDIT LOG → Auto approved
+        logger.info("College auto approved", {
+            requestId: req.requestId,
+            collegeId: newCollege._id,
+            allowedDomain
+        });
+
         await Audit.create({
             event: "COLLEGE_AUTO_APPROVED",
             metadata: {
                 collegeId: newCollege._id,
                 collegeName: newCollege.name,
-                allowedDomain,
-                adminEmail: newCollege.contactEmail
+                allowedDomain
             }
         });
 
-        return res.json({
+        res.json({
             success: true,
-            message: "Email verified and college auto-approved (valid domain).",
+            message: "Email verified and college auto-approved",
             college: newCollege
         });
 
     } catch (err) {
+        logger.error("Verify college email failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 };
 
-
-
+/**
+ * Get applications
+ */
 export const getApplications = async (req, res, next) => {
     try {
         const { status } = req.query;
         const filter = status ? { status } : {};
         const applications = await AppliedCollege.find(filter).sort({ createdAt: -1 });
+
+        logger.info("Applications fetched", {
+            requestId: req.requestId,
+            status,
+            count: applications.length
+        });
+
         res.json({ success: true, applications });
     } catch (err) {
+        logger.error("Get applications failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 };
 
+/**
+ * Manual approve college
+ */
 export const approveCollege = async (req, res, next) => {
     try {
         const { applicationId } = req.body;
+
         const application = await AppliedCollege.findById(applicationId);
+        if (!application) {
+            const error = new Error("Application not found");
+            error.statusCode = 404;
+            throw error;
+        }
 
-        if (!application) return res.status(404).json({ success: false, message: "Application not found" });
-        if (application.status === "approved") return res.status(400).json({ success: false, message: "Already approved" });
+        if (application.status === "approved") {
+            const error = new Error("Already approved");
+            error.statusCode = 400;
+            throw error;
+        }
 
-        // Create College
-        // Generate a simple code like COL001 (in real app, use better logic)
         const count = await College.countDocuments();
         const code = `COL${String(count + 1).padStart(3, "0")}`;
 
@@ -206,8 +264,8 @@ export const approveCollege = async (req, res, next) => {
         try {
             const url = new URL(application.officialWebsite);
             domain = url.hostname.replace("www.", "");
-        } catch (e) {
-            domain = application.officialWebsite; // Fallback
+        } catch {
+            domain = application.officialWebsite;
         }
 
         const newCollege = await College.create({
@@ -221,62 +279,83 @@ export const approveCollege = async (req, res, next) => {
         application.status = "approved";
         await application.save();
 
-        // Publish event if needed (optional for now)
-        try {
-            await MQService.publishCollegeCreated({
-                collegeId: newCollege._id,
-                code: newCollege.code,
-                name: newCollege.name,
-                adminEmail: newCollege.contactEmail,
-                adminPhone: newCollege.contactNumber
-            });
-        } catch (e) {
-            console.error("MQ Error", e);
-        }
+        await MQService.publishCollegeCreated({
+            collegeId: newCollege._id,
+            code: newCollege.code,
+            name: newCollege.name,
+            adminEmail: newCollege.contactEmail,
+            adminPhone: newCollege.contactNumber
+        });
+
+        logger.info("College manually approved", {
+            requestId: req.requestId,
+            collegeId: newCollege._id
+        });
 
         await Audit.create({
             event: "COLLEGE_ADMIN_APPROVED",
             metadata: {
                 collegeId: newCollege._id,
-                collegeName: newCollege.name,
-                adminEmail: newCollege.contactEmail
+                collegeName: newCollege.name
             }
         });
 
         res.json({ success: true, college: newCollege });
+
     } catch (err) {
+        logger.error("Manual college approval failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 };
 
+/**
+ * CRUD passthroughs
+ */
 export const createCollege = async (req, res, next) => {
     try {
-        const c = await CollegeService.createCollege(req.body);
-        try {
-            await MQService.publishCollegeCreated(c);
-        } catch (mqError) {
-            // Log error but don't fail the request
-            // In a real production system, we might want to save this to a DB table for retry
-            console.error("Failed to publish college created event:", mqError);
-        }
-        res.status(201).json({ success: true, college: c });
+        const college = await CollegeService.createCollege(req.body);
+        await MQService.publishCollegeCreated(college);
+
+        logger.info("College created manually", {
+            requestId: req.requestId,
+            collegeId: college._id
+        });
+
+        res.status(201).json({ success: true, college });
     } catch (err) {
+        logger.error("Create college failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 };
-
-
 
 export const getCollege = async (req, res, next) => {
     try {
-        const c = await CollegeService.getCollegeById(req.params.id);
-        if (!c) {
+        const college = await CollegeService.getCollegeById(req.params.id);
+        if (!college) {
             const error = new Error("College not found");
             error.statusCode = 404;
             throw error;
         }
-        res.json({ success: true, college: c });
+        logger.info("College fetched successfully", {
+            requestId: req.requestId,
+            collegeId: college._id
+        });
+
+        res.json({ success: true, college });
     } catch (err) {
+        logger.error("Get college failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 };
@@ -289,8 +368,19 @@ export const updateCollege = async (req, res, next) => {
             error.statusCode = 404;
             throw error;
         }
+        logger.info("College Updated successfully", {
+            requestId: req.requestId,
+            collegeId: updated._id,
+            updated_Details: req.body
+        });
+
         res.json({ success: true, updated });
     } catch (err) {
+        logger.error("Update college failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 };
@@ -298,21 +388,37 @@ export const updateCollege = async (req, res, next) => {
 export const deleteCollege = async (req, res, next) => {
     try {
         const result = await CollegeService.deleteCollege(req.params.id);
+        logger.info("College Deleted successfully", {
+            requestId: req.requestId,
+            collegeId: req.params.id,
+            Output: result
+        });
         res.json({ success: true, message: result });
     } catch (err) {
+        logger.error("Delete college failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
 };
 
-
 export const recoverCollege = async (req, res, next) => {
     try {
         const result = await CollegeService.recoverCollege(req.query.token);
-        console.log(result);
+        logger.info("College Deleted successfully", {
+            requestId: req.requestId,
+            token: req.query.token,
+            Output: result
+        });
         res.json({ success: true, message: result });
-
     } catch (err) {
-        console.error("RECOVER ERROR:", err);
+        logger.error("Recover college failed", {
+            requestId: req.requestId,
+            message: err.message,
+            stack: err.stack
+        });
         next(err);
     }
-}
+};

@@ -16,6 +16,7 @@ import { generateActionToken} from "../utils/actionToken.js";
 import ActionToken from "../models/ActionToken.model.js";
 import { validateCollege } from "./college.service.js";
 import fs from "fs";
+import logger from "../utils/logger.js";
 
 
 const PUBLIC_KEY = fs.readFileSync("./jwt_public.pem", "utf8");
@@ -31,10 +32,7 @@ export const registerUser = async ({ name, email, password, role, collegeId }) =
 
     if (role === "college_admin") {
         if (!collegeId) throw new Error("College ID is required for college admin");
-        console.log(collegeId)
-
         const college = await validateCollege(collegeId);
-        console.log(college)
         if (!college) throw new Error("Invalid College ID");
 
         if (college.allowedDomain) {
@@ -57,6 +55,12 @@ export const registerUser = async ({ name, email, password, role, collegeId }) =
     });
 
     metrics.usersRegistered.inc();
+    logger.info("User registered", {
+        userId: user._id,
+        email,
+        role,
+        collegeId
+    });
 
 
     return user;
@@ -153,6 +157,11 @@ export const loginUser = async ({ email, password, ip, userAgent }) => {
             event: "HIGH_RISK_LOGIN_BLOCKED",
             metadata: { ip, geo, riskScore }
         });
+        logger.warn("Login blocked due to high risk", {
+            userId: user._id,
+            ip,
+            riskScore
+        });
         throw new Error("Login blocked due to high risk");
     }
 
@@ -183,12 +192,20 @@ export const loginUser = async ({ email, password, ip, userAgent }) => {
                 });
                 metrics.newDeviceAlert.inc?.();
             } catch (err) {
-                console.error("Background notification error", err);
+                logger.error("New device alert background task failed", {
+                    userId: user._id,
+                    message: err.message
+                });
             }
         })();
     }
 
     const accessToken = generateAccessToken(user, jti);
+    logger.info("Login successful", {
+        userId: user._id,
+        deviceId,
+        riskScore
+    });
 
     return {
         user,
@@ -261,7 +278,13 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
                 await handleSecurityEvent('REVOKED_ACCESS', currentSession, riskScore);
             }
         } catch (err) {
-            console.error("Background security task failed:", err);
+            logger.error("handleSecurityEvent failed", {
+                service: "auth-service",
+                category: "security",
+                action: "handleSecurityEvent()",
+                message: err.message,
+                stack: err.stack
+            });        
         }
     };
 
@@ -274,7 +297,14 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
                 await Audit.create({ userId: session.userId._id?.toString() || session.userId.toString(), event: "JTI_BLACKLISTED", metadata: { jti: session.jti, reason: "token_reuse" } });
             }
         } catch (err) {
-            console.error("[SECURITY] failed to blacklist jti:", err);
+            logger.error("JTI blacklist failed", {
+                service: "auth-service",
+                category: "security",
+                action: "blacklist_jti",
+                jti: session?.jti,
+                message: err.message,
+                stack: err.stack
+            });
         }        
         handleSecurityEvent('REVOKED_ACCESS', session, riskScore);
         metrics.tokenReuseDetected.inc?.();
@@ -297,7 +327,15 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
                 await Audit.create({ userId: session.userId._id?.toString() || session.userId.toString(), event: "JTI_BLACKLISTED", metadata: { jti: session.jti, reason: "token_reuse" } });
             }
         } catch (err) {
-            console.error("[SECURITY] failed to blacklist jti:", err);
+            logger.error("JTI blacklist failed", {
+                service: "auth-service",
+                category: "security",
+                action: "blacklist_jti",
+                jti: session?.jti,
+                message: err.message,
+                stack: err.stack
+            });
+
         }
         handleSecurityEvent('TOKEN_REUSE', session, riskScore);
 
@@ -334,6 +372,11 @@ export const refreshAccessToken = async ({ refreshToken, deviceId, ip, userAgent
     );
 
     const accessToken = generateAccessToken(user, newJti);
+
+    logger.info("Refresh token rotated", {
+        userId: user._id,
+        deviceId
+    });
 
     return {
         accessToken,
@@ -386,8 +429,10 @@ export const sendOtp = async (email) => {
         }
     );
 
-    console.log("[QUEUE] OTP email job enqueued");
-
+    logger.info("OTP generated", {
+        userId: user._id,
+        email
+    });
     metrics.otpRequests.inc();
 
     return true;
@@ -409,6 +454,9 @@ export const resetPassword = async (email, otp, newPassword) => {
     user.resetOtpExp = null;
 
     await user.save();
+    logger.info("Password reset successful", {
+        userId: user._id
+    });
 
     metrics.passwordResets.inc();
 
@@ -424,7 +472,6 @@ export const verifyAccessTokenAndGetUser = async (authHeader) => {
     }
 
     const token = authHeader.split(" ")[1];
-    console.log(token)
 
     let payload;
     try {
@@ -437,11 +484,9 @@ export const verifyAccessTokenAndGetUser = async (authHeader) => {
         throw new Error("Invalid or expired token");
     }
 
-    console.log(payload)
 
     if (payload.jti) {
         const blocked = await isJtiBlacklisted(payload.jti);
-        console.log(blocked);
         if (blocked) {
             throw new Error("Token revoked");
         }
@@ -475,6 +520,9 @@ export const changePassword = async ({ userId, oldPassword, newPassword }) => {
     user.passwordHash = newHash;
     user.passwordChanged = true;
     await user.save();
+
+    logger.info("Password changed", { userId });
+
 
     return true;
 };

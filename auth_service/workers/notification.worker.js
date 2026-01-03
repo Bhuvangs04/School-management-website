@@ -11,8 +11,12 @@ import {
     getCollegeRecoveredHtml
 } from "../utils/Email.template.js"
 import axios from "axios";
+import logger from "../utils/logger.js";
 
-console.log("[EMAIL] Brevo initialized");
+logger.info("Notification worker booting", {
+    category: "worker",
+    service: "notification"
+});
 
 let worker;
 
@@ -24,10 +28,12 @@ const startWorker = async () => {
         worker = new Worker(
             "notificationQueue",
             async job => {
-                console.log(`[WORKER] job handler invoked for "${job.name}"`, {
-                    id: job.id,
-                    attemptsMade: job.attemptsMade,
-                    opts: job.opts
+                logger.info("Job received", {
+                    category: "worker",
+                    queue: "notificationQueue",
+                    jobName: job.name,
+                    jobId: job.id,
+                    attemptsMade: job.attemptsMade
                 });
 
                 try {
@@ -57,44 +63,59 @@ const startWorker = async () => {
                             throw new Error(`Unknown job type: ${job.name}`);
                     }
                 } catch (err) {
-                    console.error(`[WORKER] Exception in job "${job.name}":`, err?.message || err);
+                    logger.error(`[WORKER] Exception in job "${job.name}":`, err?.message || err);
                     throw err;
                 }
             },
             { connection, concurrency: 10 }
         );
 
-        console.log("[WORKER] Notification worker started...");
+        logger.info("Notification worker started", {
+            category: "worker",
+            queue: "notificationQueue"
+        });
 
 
         worker.on("active", job => {
-            console.log(`[WORKER] Processing job: ${job.name}`, {
-                id: job.id,
-                data: job.data,
-                attemptsMade: job.attemptsMade
+            logger.info("Job active", {
+                category: "worker",
+                jobId: job.id,
+                jobName: job.name
             });
         });
 
         worker.on("completed", async job => {
-            console.log(`[WORKER] Job completed: ${job.name}`, { id: job.id });
+            logger.info("Job completed", {
+                category: "worker",
+                jobId: job.id,
+                jobName: job.name
+            });
 
             if (job.data?.audit) {
                 try {
                     await auditQueue.add("auditEvent", job.data.audit, {
                         removeOnComplete: true
                     });
-                    console.log("[WORKER] Audit queued");
+                    logger.info("Audit enqueued", {
+                        category: "audit",
+                        jobId: job.id
+                    });
                 } catch (err) {
-                    console.error("[WORKER] Failed to enqueue audit:", err?.message || err);
+                    logger.error("Audit enqueue failed", {
+                        category: "audit",
+                        error: err.message
+                    });
                 }
             }
         });
 
         worker.on("failed", async (job, err) => {
-            console.error(`[WORKER] Job failed: ${job?.name}`, {
-                id: job?.id,
+            logger.error("Job failed", {
+                category: "worker",
+                jobId: job?.id,
+                jobName: job?.name,
                 attemptsMade: job?.attemptsMade,
-                reason: err?.message || String(err)
+                error: err.message
             });
 
             try {
@@ -110,15 +131,26 @@ const startWorker = async () => {
                         },
                         { removeOnComplete: true }
                     );
-                    console.warn("[DLQ] Moved to DLQ:", job.name);
+                    logger.warn("Moved to DLQ", {
+                        category: "dlq",
+                        jobName: job.name,
+                        jobId: job.id
+                    });
                 }
             } catch (dlqErr) {
-                console.error("[DLQ] Failed to push to DLQ:", dlqErr?.message || dlqErr);
+                logger.error("DLQ push failed", {
+                    category: "dlq",
+                    error: dlqErr.message
+                });
             }
         });
 
     } catch (error) {
-        console.error("Failed to start worker:", error);
+        logger.error("Worker startup failed", {
+            category: "worker",
+            error: error.message,
+            stack: error.stack
+        });
         process.exit(1);
     }
 };
@@ -148,16 +180,31 @@ async function sendBrevoEmail({ to, subject, html }) {
             }
         );
 
-        console.log("[BREVO] Email sent", res.data);
+        logger.info("Email sent", {
+            category: "email",
+            provider: "brevo",
+            to,
+            subject
+        });
         return res.data;
     } catch (err) {
-        console.error("[BREVO] Email error:", err?.response?.data || err.message);
+        logger.error("Email send failed", {
+            category: "email",
+            provider: "brevo",
+            to,
+            error: err.response?.data || err.message
+        });
         throw err;
     }
 }
 
 async function OneTimePassword({ email, name, role, tempory_password, audit }) {
-    console.log("[EMAIL] OneTimePassword called", { email, name, role, audit });
+    logger.info("OneTimePassword email", {
+        category: "email",
+        type: "otp",
+        email,
+        role
+    });
     if (!email) throw new Error("Missing: email");
     const html = getOneTimeEmail({ email, name, role, tempory_password, });
     await sendBrevoEmail({
@@ -179,8 +226,10 @@ async function sendCollegeDeletionRecoveryEmail({
     recoverUntil,
     audit
 }) {
-    console.log("[EMAIL] sendCollegeDeletionRecoveryEmail", {
-        adminEmail,
+    logger.info("Email requested", {
+        category: "email",
+        emailType: "college_deletion_recovery",
+        to: adminEmail,
         collegeName
     });
 
@@ -214,8 +263,10 @@ async function sendCollegeRecoveredEmail({
     collegeName,
     audit
 }) {
-    console.log("[EMAIL] sendCollegeRecoveredEmail", {
-        adminEmail,
+    logger.info("Email requested", {
+        category: "email",
+        emailType: "college_recovered",
+        to: adminEmail,
         collegeName
     });
 
@@ -249,7 +300,12 @@ async function sendCollegeVerificationEmail({
     verificationLink,
     audit
 }) {
-    console.log("[EMAIL] sendCollegeVerificationEmail =>", { email });
+    logger.info("Email requested", {
+        category: "email",
+        emailType: "college_verification",
+        to: email,
+        collegeName
+    });
 
     if (!email || !verificationLink)
         throw new Error("Missing: email or verificationLink");
@@ -278,7 +334,12 @@ async function sendCollegeVerificationEmail({
 
 
 async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore, approveUrl }) {
-    console.log("[EMAIL] sendNewDeviceEmail called", { email, deviceId, ip, geo, riskScore, approveUrl });
+    logger.info("Email requested", {
+        category: "email",
+        emailType: "new_device_login",
+        to: email,
+        riskScore
+    });
 
     if (!email) throw new Error("Missing: email");
 
@@ -296,8 +357,11 @@ async function sendNewDeviceEmail({ email, deviceId, ip, geo, riskScore, approve
 }
 
 async function sendOtpEmail({ email, otp }) {
-    console.log("[EMAIL] sendOtpEmail called", { email, otp });
-
+    logger.info("Email requested", {
+        category: "email",
+        emailType: "otp",
+        to: email
+    });
     if (!email || !otp) throw new Error("Missing email or otp");
 
     const html = getOtpHtml(otp)
@@ -315,8 +379,12 @@ async function sendOtpEmail({ email, otp }) {
 
 
 async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore, revokeUrl, revokeAllUrl }) {
-    console.log("[EMAIL] sendTokenReuseAlert called", {email, deviceId, ip, geo, riskScore, revokeUrl,revokeAllUrl });
-
+    logger.info("Email requested", {
+        category: "email",
+        emailType: "token_reuse_alert",
+        to: email,
+        riskScore
+    });
     if (!email) throw new Error("Missing: email");
 
     const html = getTokenReuseHtml({ deviceId, ip, geo, riskScore, revokeUrl, revokeAllUrl });
@@ -336,23 +404,33 @@ async function sendTokenReuseAlert({ email, deviceId, ip, geo, riskScore, revoke
 async function saveAuditSafe(userId, event, metadata = {}) {
     try {
         await Audit.create({ userId, event, metadata, createdAt: new Date() });
-        console.log("[AUDIT] Saved:", { userId, event });
+        logger.info("Audit saved", {
+            category: "audit",
+            event,
+            userId
+        });
     } catch (err) {
-        console.error("[AUDIT] save failed:", err?.message || err);
+        logger.error("Audit save failed", {
+            category: "audit",
+            error: err.message
+        });
     }
 }
 
 
 async function shutdown(signal) {
     try {
-        console.log(`[WORKER] Shutting down (${signal})`);
+        logger.info("Worker shutting down", {
+            category: "process",
+            signal
+        });
         if (worker) {
             await worker.close();
-            console.log("[WORKER] Closed gracefully");
+            logger.info("[WORKER] Closed gracefully");
         }
         process.exit(0);
     } catch (err) {
-        console.error("[WORKER] Shutdown error:", err?.message || err);
+        logger.error("[WORKER] Shutdown error:", err?.message || err);
         process.exit(1);
     }
 }
@@ -361,11 +439,18 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 process.on("unhandledRejection", reason =>
-    console.error("[PROCESS] Unhandled Rejection:", reason)
+    logger.error("Unhandled rejection", {
+        category: "process",
+        reason
+    })
 );
 
 process.on("uncaughtException", err => {
-    console.error("[PROCESS] Uncaught Exception:", err?.message || err);
+    logger.error("Uncaught exception", {
+        category: "process",
+        error: err.message,
+        stack: err.stack
+    });
     process.exit(1);
 });
 

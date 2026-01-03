@@ -59,15 +59,12 @@ const worker = new Worker(
     "studentImportQueue",
     async job => {
         const { uploadJobId, path: filePath } = job.data;
+        logger.info("Student import started", { uploadJobId });
 
         let localFile = filePath;
 
         if (filePath.startsWith("s3://") || filePath.includes(".amazonaws.com")) {
-            logger.info("Downloading file from S3:", filePath);
-
             localFile = await downloadFromS3(filePath, "./temp");
-
-            logger.info("Downloaded to local:", localFile);
         }
 
         const uj = await UploadJob.findById(uploadJobId);
@@ -332,6 +329,12 @@ const worker = new Worker(
 
         await createAudit(null, "UPLOAD_JOB_COMPLETED", {
             uploadJobId,
+            successes: successes.length,
+            failures: failures.length
+        });
+        logger.info("Student import completed", {
+            uploadJobId,
+            processed,
             successes: successes.length,
             failures: failures.length
         });

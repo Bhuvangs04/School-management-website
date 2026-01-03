@@ -1,7 +1,8 @@
 import { connection as redis } from "../lib/redis.js";
+import logger from "../utils/logger.js";
 
 export const recoveryRateLimit = ({
-    windowSec = 15 * 60,  
+    windowSec = 15 * 60,
     maxAttempts = 5
 } = {}) => {
     return async (req, res, next) => {
@@ -15,12 +16,15 @@ export const recoveryRateLimit = ({
 
             const key = `recover:${token}:${ip}`;
             const attempts = await redis.incr(key);
-
-            if (attempts === 1) {
-                await redis.expire(key, windowSec);
-            }
+            if (attempts === 1) await redis.expire(key, windowSec);
 
             if (attempts > maxAttempts) {
+                logger.warn("Recovery rate limit exceeded", {
+                    ip,
+                    token,
+                    attempts
+                });
+
                 return res.status(429).json({
                     message: "Too many recovery attempts. Please try later."
                 });
@@ -28,9 +32,11 @@ export const recoveryRateLimit = ({
 
             next();
         } catch (err) {
-            console.log(err)
-            console.error("[RATE_LIMIT] Error:", err.message);
-            return res.status(500).json({ message: "Rate limit error" });
+            logger.error("Recovery rate limit error", {
+                message: err.message,
+                stack: err.stack
+            });
+            res.status(500).json({ message: "Rate limit error" });
         }
     };
 };

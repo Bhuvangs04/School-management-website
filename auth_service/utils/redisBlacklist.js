@@ -15,7 +15,7 @@ export async function blacklistJTI(jti, expiresAt = null) {
             await connection.set(key, "1", "EX", 7 * 24 * 3600);
         }
     } catch (err) {
-        console.error("[REDIS] blacklistJTI error", err);
+        logger.error("[REDIS] blacklistJTI error", err);
     }
 }
 
@@ -23,13 +23,11 @@ export async function blacklistJTI(jti, expiresAt = null) {
 export async function isJtiBlacklisted(jti) {
     if (!jti) return false;
     try {
-        console.log(jti)
         const key = `bl_jti:${jti}`;
         const v = await connection.get(key);
-        console.log(v);
         return !!v;
     } catch (err) {
-        console.error("[REDIS] isJtiBlacklisted error", err);
+        logger.error("[REDIS] isJtiBlacklisted error", err);
         return false;
     }
 }

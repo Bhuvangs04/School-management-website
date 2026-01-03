@@ -1,5 +1,6 @@
 import amqp from "amqplib";
 import dotenv from "dotenv";
+import logger from "./logger";
 dotenv.config();
 
 class RabbitMQ {
@@ -17,24 +18,39 @@ class RabbitMQ {
         this.isConnecting = true;
 
         try {
-            console.log("[RMQ] Connecting...");
+            logger.info("RMQ connecting", {
+                category: "mq",
+                url: this.url
+            });
             this.connection = await amqp.connect(this.url);
             this.channel = await this.connection.createChannel();
-            console.log("[RMQ] Connected");
+            logger.info("RMQ connected", {
+                category: "mq"
+            });
 
             this.connection.on("close", () => {
-                console.warn("[RMQ] Connection closed → retrying in 5s");
+                logger.warn("RMQ connection closed, retrying", {
+                    category: "mq"
+                });
                 this.connection = null;
                 this.channel = null;
                 setTimeout(() => this.connect(), 5000);
             });
 
             this.connection.on("error", (err) => {
-                console.error("[RMQ] Connection error:", err.message);
+                logger.error("RMQ connection error", {
+                    category: "mq",
+                    message: err.message,
+                    stack: err.stack
+                });
             });
 
         } catch (err) {
-            console.error("[RMQ] Connection failed:", err.message);
+            logger.error("RMQ connection failed", {
+                category: "mq",
+                message: err.message,
+                stack: err.stack
+            });            
             this.connection = null;
             this.channel = null;
             setTimeout(() => this.connect(), 5000);
@@ -58,13 +74,24 @@ class RabbitMQ {
         try {
             await this.channel.assertQueue(queue, { durable: true });
 
+            logger.info("RMQ queue message published", {
+                category: "mq",
+                queue
+            });
+
             return this.channel.sendToQueue(
                 queue,
                 Buffer.from(JSON.stringify(message)),
                 { persistent: true }
             );
+
         } catch (err) {
-            console.error(`[RMQ] Queue publish error (${queue})`, err);
+            logger.error("RMQ queue publish failed", {
+                category: "mq",
+                queue,
+                message: err.message,
+                stack: err.stack
+            });
             return false;
         }
     }
@@ -84,14 +111,28 @@ class RabbitMQ {
                     await callback(content);
                     this.channel.ack(msg);
                 } catch (err) {
-                    console.error(`[RMQ] Queue consume error (${queue})`, err);
+                    logger.error("RMQ queue consume error", {
+                        category: "mq",
+                        queue,
+                        message: err.message,
+                        stack: err.stack
+                    });
+
                     this.channel.ack(msg); // prevent poison loop
                 }
             });
 
-            console.log(`[RMQ] Consuming queue → ${queue}`);
+            logger.info("RMQ queue consuming", {
+                category: "mq",
+                queue
+            });
         } catch (err) {
-            console.error(`[RMQ] Consume setup failed (${queue})`, err);
+            logger.error("RMQ queue consume setup failed", {
+                category: "mq",
+                queue,
+                message: err.message,
+                stack: err.stack
+            });
         }
     }
 
@@ -110,6 +151,12 @@ class RabbitMQ {
         try {
             await this.assertFanoutExchange(exchange);
 
+            logger.info("RMQ fanout published", {
+                category: "mq",
+                exchange,
+                eventType: message?.type
+            });
+
             return this.channel.publish(
                 exchange,
                 "",
@@ -117,7 +164,12 @@ class RabbitMQ {
                 { persistent: true }
             );
         } catch (err) {
-            console.error(`[RMQ] Fanout publish error (${exchange})`, err);
+            logger.error("RMQ fanout publish failed", {
+                category: "mq",
+                exchange,
+                message: err.message,
+                stack: err.stack
+            });
             return false;
         }
     }
@@ -140,14 +192,30 @@ class RabbitMQ {
                     await callback(content);
                     this.channel.ack(msg);
                 } catch (err) {
-                    console.error(`[RMQ] Fanout consume error (${queue})`, err);
+                    logger.error("RMQ fanout consume error", {
+                        category: "mq",
+                        exchange,
+                        queue,
+                        message: err.message,
+                        stack: err.stack
+                    });
                     this.channel.nack(msg, false, true); // retry
                 }
             });
 
-            console.log(`[RMQ] Fanout consuming → ${exchange} → ${queue}`);
+            logger.info("RMQ fanout consuming", {
+                category: "mq",
+                exchange,
+                queue
+            });
         } catch (err) {
-            console.error(`[RMQ] Fanout setup failed`, err);
+            logger.error("RMQ fanout consume setup failed", {
+                category: "mq",
+                exchange,
+                queue,
+                message: err.message,
+                stack: err.stack
+            });
         }
     }
 }

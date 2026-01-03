@@ -11,6 +11,7 @@ import adminRoutes from "./routes/admin.routes.js";
 import departmentRoutes from "./routes/department.routes.js"
 import errorHandler from "./middleware/errorHandler.js";
 import MQService from "./services/mq.service.js";
+import { requestLogger } from "./middleware/requestLogger.js"
 
 import fs from "fs";
 import { initCollegeConsumers } from "./consumers/college.consumer.js";
@@ -43,6 +44,9 @@ await MQService.init();
 
 // start consumers AFTER MQ is ready
 await initCollegeConsumers();
+
+
+app.use(requestLogger);
 
 
 // Routes
